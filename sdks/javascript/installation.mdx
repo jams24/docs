@@ -1,0 +1,259 @@
+---
+title: "JavaScript/TypeScript Installation"
+description: "Install and set up the InventPay JavaScript/TypeScript SDK"
+---
+
+## Requirements
+
+- Node.js 14 or higher
+- npm, yarn, or pnpm
+
+## Installation
+
+Install the InventPay SDK using your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install inventpay
+```
+
+```bash yarn
+yarn add inventpay
+```
+
+```bash pnpm
+pnpm add inventpay
+```
+
+</CodeGroup>
+
+## Verify Installation
+
+After installation, verify the SDK is working:
+
+```javascript
+const { PaymentSDK } = require("inventpay");
+console.log("InventPay SDK installed successfully!");
+```
+
+Or with ES modules:
+
+```javascript
+import { PaymentSDK } from "inventpay";
+console.log("InventPay SDK installed successfully!");
+```
+
+## TypeScript Support
+
+The SDK includes full TypeScript definitions out of the box. No additional @types package needed!
+
+```typescript
+import { PaymentSDK, PaymentRequest, PaymentResponse } from "inventpay";
+
+// Full type safety and auto-completion
+const sdk = new PaymentSDK({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+```
+
+## Package Info
+
+<CardGroup cols={2}>
+  <Card title="Package Size" icon="box">
+    Lightweight with zero dependencies
+  </Card>
+  <Card title="TypeScript" icon="code">
+    Full type definitions included
+  </Card>
+  <Card title="Tree-shakeable" icon="tree">
+    Import only what you need
+  </Card>
+  <Card title="ESM & CommonJS" icon="cubes">
+    Supports both module systems
+  </Card>
+</CardGroup>
+
+## What's Included
+
+When you install `inventpay`, you get:
+
+- **PaymentSDK** - Main SDK class
+- **Type Definitions** - Complete TypeScript types
+- **Helper Functions** - Webhook verification and utilities
+- **Error Classes** - Custom error handling
+
+## Dependencies
+
+The InventPay SDK has **zero external dependencies**, keeping your bundle size small and reducing potential security vulnerabilities.
+
+## Browser Support
+
+While the SDK can technically run in browsers, **we strongly recommend using it only on the server-side**:
+
+<Warning>
+  Never expose your API key in client-side JavaScript! Always make API calls
+  from your backend server.
+</Warning>
+
+If you need to accept payments from a browser:
+
+1. Create a server endpoint that uses the SDK
+2. Call that endpoint from your frontend
+3. Redirect users to the payment URL returned by your backend
+
+## Framework-Specific Setup
+
+### Express.js
+
+```javascript
+const express = require("express");
+const { PaymentSDK } = require("inventpay");
+
+const app = express();
+const sdk = new PaymentSDK({
+  apiKey: process.env.INVENTPAY_API_KEY,
+});
+
+app.get("/create-payment", async (req, res) => {
+  const payment = await sdk.createPayment({
+    amount: 29.99,
+    currency: "USDT_BEP20",
+    orderId: "order-12345",
+  });
+  res.json(payment);
+});
+```
+
+### Next.js API Routes
+
+```typescript
+// pages/api/create-payment.ts
+import type { NextApiRequest, NextApiResponse } from "next";
+import { PaymentSDK } from "inventpay";
+
+const sdk = new PaymentSDK({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const payment = await sdk.createPayment({
+    amount: 29.99,
+    currency: "USDT_BEP20",
+    orderId: "order-12345",
+  });
+
+  res.status(200).json(payment);
+}
+```
+
+### NestJS
+
+```typescript
+// payment.service.ts
+import { Injectable } from "@nestjs/common";
+import { PaymentSDK } from "inventpay";
+
+@Injectable()
+export class PaymentService {
+  private sdk: PaymentSDK;
+
+  constructor() {
+    this.sdk = new PaymentSDK({
+      apiKey: process.env.INVENTPAY_API_KEY!,
+    });
+  }
+
+  async createPayment() {
+    return this.sdk.createPayment({
+      amount: 29.99,
+      currency: "USDT_BEP20",
+      orderId: "order-12345",
+    });
+  }
+}
+```
+
+## Environment Variables
+
+Store your API key securely in environment variables:
+
+Create a `.env` file:
+
+```bash
+INVENTPAY_API_KEY=your_api_key_here
+```
+
+Load it in your application:
+
+```javascript
+// Using dotenv
+require("dotenv").config();
+
+const { PaymentSDK } = require("inventpay");
+const sdk = new PaymentSDK({
+  apiKey: process.env.INVENTPAY_API_KEY,
+});
+```
+
+<Warning>
+  Never commit your `.env` file to version control! Add it to `.gitignore`.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Module not found error" icon="circle-question">
+    **Error:** `Cannot find module 'inventpay'` **Solution:** 1. Ensure you ran
+    the install command 2. Check that `inventpay` is in your `package.json`
+    dependencies 3. Try deleting `node_modules` and reinstalling ```bash rm -rf
+    node_modules package-lock.json npm install ```
+  </Accordion>
+
+  <Accordion title="TypeScript errors" icon="circle-question">
+    **Error:** Type errors when importing **Solution:** 1. Ensure you're using
+    TypeScript 4.0+ 2. Check your `tsconfig.json` has `"moduleResolution":
+    "node"` 3. Try restarting your TypeScript server
+  </Accordion>
+
+  <Accordion title="ESM/CommonJS issues" icon="circle-question">
+    **Error:** `require() of ES Module not supported` **Solution:** Use
+    appropriate import syntax for your module system: CommonJS: ```javascript
+    const {PaymentSDK} = require('inventpay'); ``` ES Modules: ```javascript
+    import {PaymentSDK} from 'inventpay'; ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/sdks/javascript/configuration">
+    Learn how to configure the SDK
+  </Card>
+  <Card title="Usage Guide" icon="book" href="/sdks/javascript/usage">
+    Start using the SDK
+  </Card>
+  <Card title="Examples" icon="code" href="/sdks/javascript/examples">
+    See complete code examples
+  </Card>
+  <Card title="API Reference" icon="list" href="/api-reference/introduction">
+    Explore all available methods
+  </Card>
+</CardGroup>
+
+## Updating the SDK
+
+To update to the latest version:
+
+```bash npm
+npm update inventpay
+```
+
+```bash yarn
+yarn upgrade inventpay
+```
+
+Check the [GitHub releases](https://github.com/inventpay/inventpay-sdk-js/releases) for changelog and breaking changes.

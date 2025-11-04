@@ -1,0 +1,559 @@
+---
+title: "Python SDK Usage"
+description: "Complete guide to using the InventPay Python SDK"
+---
+
+## Client Initialization
+
+First, create an InventPay client instance:
+
+```python
+import os
+from inventpay import InventPayClient
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+```
+
+## Payments
+
+### Create a Payment
+
+Create a fixed-currency payment:
+
+```python
+payment = client.payments.create(
+    amount='100.00',
+    currency='BTC',
+    description='Order #12345',
+    callback_url='https://yoursite.com/webhooks/inventpay',
+    metadata={
+        'order_id': '12345',
+        'customer_id': 'cust_abc123',
+    },
+)
+
+print(f"Payment Address: {payment.payment_address}")
+print(f"Amount to pay: {payment.amount} {payment.currency}")
+```
+
+<Tip>
+  The `metadata` field can store any JSON-serializable data and will be returned
+  in webhooks.
+</Tip>
+
+### Get Payment Status
+
+```python
+payment = client.payments.get('pmt_1234567890')
+
+print(f"Status: {payment.status}")
+print(f"Paid: {payment.is_paid}")
+print(f"Confirmed: {payment.is_confirmed}")
+
+# Check specific statuses
+if payment.status == 'pending':
+    print('Waiting for payment...')
+elif payment.status == 'confirmed':
+    print('Payment confirmed!')
+```
+
+### List Payments
+
+```python
+# List all payments
+payments = client.payments.list()
+
+# List with pagination
+payments_page1 = client.payments.list(limit=20, page=1)
+
+# List with filters
+recent_payments = client.payments.list(
+    status='confirmed',
+    currency='BTC',
+    limit=10,
+)
+
+for payment in recent_payments:
+    print(f"{payment.id}: {payment.amount} {payment.currency}")
+```
+
+## Invoices
+
+### Create an Invoice
+
+Create a multi-currency invoice:
+
+```python
+invoice = client.invoices.create(
+    amount='1000.00',
+    currency='USD',
+    description='Premium Subscription',
+    callback_url='https://yoursite.com/webhooks/inventpay',
+    metadata={
+        'subscription_id': 'sub_xyz789',
+        'plan': 'premium',
+    },
+)
+
+print(f"Invoice URL: {invoice.hosted_url}")
+
+# Available payment options
+for option in invoice.payment_options:
+    print(f"Pay {option['amount']} {option['currency']}")
+```
+
+### Get Invoice Status
+
+```python
+invoice = client.invoices.get('inv_1234567890')
+
+print(f"Status: {invoice.status}")
+print(f"Selected currency: {invoice.selected_currency}")
+print(f"Amount paid: {invoice.amount_paid}")
+```
+
+### List Invoices
+
+```python
+invoices = client.invoices.list(status='pending', limit=20)
+
+for invoice in invoices:
+    print(f"{invoice.id}: {invoice.amount} {invoice.currency}")
+```
+
+## Balances
+
+### Get All Balances
+
+```python
+balances = client.balances.get_all()
+
+for balance in balances:
+    print(f"{balance.currency}: {balance.available}")
+```
+
+### Get Balance by Currency
+
+```python
+btc_balance = client.balances.get_by_currency('BTC')
+
+print(f"Available: {btc_balance.available}")
+print(f"Pending: {btc_balance.pending}")
+print(f"Total: {btc_balance.total}")
+```
+
+### Get Transaction History
+
+```python
+transactions = client.balances.get_transactions('BTC', limit=50, page=1)
+
+for tx in transactions:
+    print(f"{tx.type}: {tx.amount} {tx.currency}")
+```
+
+## Withdrawals
+
+### Create a Withdrawal
+
+```python
+withdrawal = client.withdrawals.create(
+    amount='0.5',
+    currency='BTC',
+    address='bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+    network='bitcoin',
+)
+
+print(f"Withdrawal ID: {withdrawal.id}")
+print(f"Status: {withdrawal.status}")
+print(f"Fee: {withdrawal.fee}")
+```
+
+<Warning>
+  Always verify the withdrawal address before submitting. Cryptocurrency
+  transactions are irreversible.
+</Warning>
+
+### Get Withdrawal Status
+
+```python
+withdrawal = client.withdrawals.get('wth_1234567890')
+
+print(f"Status: {withdrawal.status}")
+
+if withdrawal.status == 'completed':
+    print(f"Transaction hash: {withdrawal.transaction_hash}")
+```
+
+### List Withdrawals
+
+```python
+withdrawals = client.withdrawals.list(
+    currency='BTC',
+    status='completed',
+    limit=20,
+)
+```
+
+## Webhook Handling
+
+### Verify Webhook Signature (Flask)
+
+```python
+from flask import Flask, request
+from inventpay import InventPayClient
+
+app = Flask(__name__)
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+@app.route('/webhooks/inventpay', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('X-InventPay-Signature')
+    payload = request.get_data(as_text=True)
+
+    try:
+        # Verify the webhook signature
+        event = client.webhooks.verify(payload, signature)
+
+        # Handle the event
+        if event.type == 'payment.confirmed':
+            print(f"Payment confirmed: {event.data.id}")
+            # Update your database, fulfill order, etc.
+
+        elif event.type == 'payment.failed':
+            print(f"Payment failed: {event.data.id}")
+            # Handle failed payment
+
+        elif event.type == 'invoice.paid':
+            print(f"Invoice paid: {event.data.id}")
+            # Activate subscription, etc.
+
+        elif event.type == 'withdrawal.completed':
+            print(f"Withdrawal completed: {event.data.id}")
+            # Update balance display, etc.
+
+        return 'OK', 200
+
+    except Exception as e:
+        print(f"Webhook verification failed: {e}")
+        return 'Invalid signature', 400
+```
+
+### Verify Webhook Signature (Django)
+
+```python
+from django.http import HttpResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from inventpay import InventPayClient
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def handle_webhook(request):
+    signature = request.headers.get('X-InventPay-Signature')
+    payload = request.body.decode('utf-8')
+
+    try:
+        event = client.webhooks.verify(payload, signature)
+
+        if event.type == 'payment.confirmed':
+            # Handle payment confirmation
+            print(f"Payment confirmed: {event.data.id}")
+
+        return HttpResponse('OK', status=200)
+
+    except Exception as e:
+        return HttpResponse('Invalid signature', status=400)
+```
+
+## Error Handling
+
+### Try-Except Pattern
+
+```python
+from inventpay import InventPayError, AuthenticationError, RateLimitError
+
+try:
+    payment = client.payments.create(
+        amount='100.00',
+        currency='BTC',
+    )
+except InventPayError as e:
+    # API error
+    print(f"API Error: {e.status_code} - {e.message}")
+
+    # Handle specific errors
+    if isinstance(e, AuthenticationError):
+        print("Invalid API key")
+    elif isinstance(e, RateLimitError):
+        print(f"Rate limit exceeded, retry after: {e.retry_after}s")
+
+except Exception as e:
+    # Network or other error
+    print(f"Unexpected error: {e}")
+```
+
+### Error Types
+
+```python
+from inventpay import (
+    InventPayError,
+    AuthenticationError,
+    RateLimitError,
+    ValidationError,
+)
+
+try:
+    payment = client.payments.create(amount='100', currency='BTC')
+except AuthenticationError:
+    print('Authentication failed')
+except RateLimitError as e:
+    print(f'Rate limit exceeded, retry after: {e.retry_after}')
+except ValidationError as e:
+    print(f'Validation failed: {e.errors}')
+except InventPayError as e:
+    print(f'API error: {e.message}')
+```
+
+## Async Usage
+
+### Async Client
+
+```python
+import asyncio
+from inventpay import AsyncInventPayClient
+
+async def main():
+    client = AsyncInventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+    try:
+        # All methods support async/await
+        payment = await client.payments.create(
+            amount='100.00',
+            currency='BTC',
+        )
+
+        print(payment.payment_address)
+
+    finally:
+        await client.close()
+
+# Run async code
+asyncio.run(main())
+```
+
+### Async Context Manager
+
+```python
+import asyncio
+from inventpay import AsyncInventPayClient
+
+async def main():
+    async with AsyncInventPayClient(api_key=os.getenv('INVENTPAY_API_KEY')) as client:
+        payment = await client.payments.create(
+            amount='100.00',
+            currency='BTC',
+        )
+        print(payment.id)
+
+asyncio.run(main())
+```
+
+### Async Webhooks (FastAPI)
+
+```python
+from fastapi import FastAPI, HTTPException, Header
+from inventpay import AsyncInventPayClient
+
+app = FastAPI()
+client = AsyncInventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+@app.post('/webhooks/inventpay')
+async def handle_webhook(
+    request: Request,
+    x_inventpay_signature: str = Header(...),
+):
+    body = await request.body()
+    payload = body.decode('utf-8')
+
+    try:
+        event = await client.webhooks.verify_async(payload, x_inventpay_signature)
+
+        if event.type == 'payment.confirmed':
+            await process_payment(event.data)
+
+        return {'status': 'ok'}
+
+    except Exception:
+        raise HTTPException(status_code=400, detail='Invalid signature')
+
+async def process_payment(payment):
+    print(f"Processing payment: {payment.id}")
+    # Async database operations, etc.
+```
+
+## Advanced Usage
+
+### Pagination
+
+```python
+# Manual pagination
+page = 1
+all_payments = []
+
+while True:
+    payments = client.payments.list(limit=100, page=page)
+
+    if not payments:
+        break
+
+    all_payments.extend(payments)
+    page += 1
+
+print(f"Total payments: {len(all_payments)}")
+```
+
+### Parallel Requests with asyncio
+
+```python
+import asyncio
+from inventpay import AsyncInventPayClient
+
+async def fetch_all_data():
+    async with AsyncInventPayClient(api_key=os.getenv('INVENTPAY_API_KEY')) as client:
+        # Fetch multiple resources in parallel
+        balances, payments, withdrawals = await asyncio.gather(
+            client.balances.get_all(),
+            client.payments.list(limit=10),
+            client.withdrawals.list(limit=10),
+        )
+
+        return balances, payments, withdrawals
+
+balances, payments, withdrawals = asyncio.run(fetch_all_data())
+```
+
+### Context Manager for Cleanup
+
+```python
+from inventpay import InventPayClient
+
+with InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY')) as client:
+    payment = client.payments.create(
+        amount='100.00',
+        currency='BTC',
+    )
+    print(payment.id)
+
+# Client is automatically closed
+```
+
+## Type Hints
+
+The SDK includes full type hints:
+
+```python
+from inventpay import InventPayClient
+from inventpay.types import Payment, Invoice, Balance
+from typing import List
+
+client: InventPayClient = InventPayClient(api_key='your-api-key')
+
+# Type-safe responses
+payment: Payment = client.payments.create(
+    amount='100.00',
+    currency='BTC',
+)
+
+balances: List[Balance] = client.balances.get_all()
+```
+
+## Best Practices
+
+<Check>Always use environment variables for API keys</Check>
+<Check>Implement proper error handling for all API calls</Check>
+<Check>Use webhooks for payment notifications instead of polling</Check>
+<Check>Verify webhook signatures to ensure authenticity</Check>
+<Check>Store metadata with payments for easier tracking</Check>
+<Check>Use async client for better performance in async applications</Check>
+<Check>Implement retry logic for network failures</Check>
+<Check>Log errors and monitor API responses</Check>
+<Check>Test with sandbox environment before production</Check>
+<Check>Keep the SDK updated to the latest version</Check>
+
+## Common Patterns
+
+### Payment Flow with Webhook
+
+```python
+# 1. Create payment
+payment = client.payments.create(
+    amount='100.00',
+    currency='BTC',
+    description='Order #12345',
+    callback_url='https://yoursite.com/webhooks/inventpay',
+    metadata={'order_id': '12345'},
+)
+
+# 2. Show payment address to user
+print(f"Please send {payment.amount} {payment.currency} to {payment.payment_address}")
+
+# 3. Wait for webhook (in separate handler)
+@app.route('/webhooks/inventpay', methods=['POST'])
+def webhook():
+    event = client.webhooks.verify(request.get_data(as_text=True), request.headers.get('X-InventPay-Signature'))
+
+    if event.type == 'payment.confirmed' and event.data.id == payment.id:
+        # Payment confirmed! Fulfill order
+        fulfill_order(event.data.metadata['order_id'])
+
+    return 'OK', 200
+```
+
+### Subscription Payment
+
+```python
+# Create invoice for subscription
+invoice = client.invoices.create(
+    amount='29.99',
+    currency='USD',
+    description='Monthly Subscription',
+    metadata={
+        'user_id': 'user_123',
+        'plan': 'premium',
+    },
+)
+
+# Redirect user to invoice page
+return redirect(invoice.hosted_url)
+
+# Handle webhook when paid
+@app.route('/webhooks/inventpay', methods=['POST'])
+def webhook():
+    event = client.webhooks.verify(request.get_data(as_text=True), request.headers.get('X-InventPay-Signature'))
+
+    if event.type == 'invoice.paid':
+        user_id = event.data.metadata['user_id']
+        plan = event.data.metadata['plan']
+        activate_subscription(user_id, plan)
+
+    return 'OK', 200
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Examples" icon="code" href="/sdks/python/examples">
+    See complete, runnable examples
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Detailed API documentation
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/webhooks/overview">
+    Learn about webhook events
+  </Card>
+  <Card title="Best Practices" icon="shield-check" href="/concepts/payments">
+    Security and optimization tips
+  </Card>
+</CardGroup>

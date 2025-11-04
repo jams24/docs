@@ -1,0 +1,507 @@
+---
+title: "Python SDK Installation"
+description: "Install and set up the InventPay Python SDK"
+---
+
+## Requirements
+
+- **Python**: 3.7 or higher
+- **pip**: Latest version recommended
+- **Virtual Environment**: Recommended for isolation
+
+## Installation
+
+<CodeGroup>
+```bash pip
+pip install inventpay
+```
+
+```bash Poetry
+poetry add inventpay
+```
+
+```bash Pipenv
+pipenv install inventpay
+```
+
+</CodeGroup>
+
+## Virtual Environment Setup
+
+We strongly recommend using a virtual environment:
+
+<Tabs>
+  <Tab title="venv">
+    ```bash
+    # Create virtual environment
+    python -m venv venv
+
+    # Activate (Linux/macOS)
+    source venv/bin/activate
+
+    # Activate (Windows)
+    venv\Scripts\activate
+
+    # Install InventPay
+    pip install inventpay
+    ```
+
+  </Tab>
+
+  <Tab title="virtualenv">
+    ```bash
+    # Install virtualenv
+    pip install virtualenv
+
+    # Create virtual environment
+    virtualenv venv
+
+    # Activate (Linux/macOS)
+    source venv/bin/activate
+
+    # Activate (Windows)
+    venv\Scripts\activate
+
+    # Install InventPay
+    pip install inventpay
+    ```
+
+  </Tab>
+
+  <Tab title="conda">
+    ```bash
+    # Create conda environment
+    conda create -n inventpay python=3.11
+
+    # Activate environment
+    conda activate inventpay
+
+    # Install InventPay
+    pip install inventpay
+    ```
+
+  </Tab>
+</Tabs>
+
+## Environment Setup
+
+### 1. Get Your API Key
+
+1. Log in to the [InventPay Dashboard](https://inventpay.io/dashboard)
+2. Navigate to **Settings → API Keys**
+3. Create a new API key
+4. Copy the key (you'll only see it once!)
+
+### 2. Store API Key Securely
+
+Create a `.env` file in your project root:
+
+```bash .env
+INVENTPAY_API_KEY=ipay_live_1234567890abcdef
+```
+
+<Warning>
+**Never commit your `.env` file to version control!**
+
+Add `.env` to your `.gitignore`:
+
+```gitignore
+.env
+.env.local
+__pycache__/
+*.pyc
+```
+
+</Warning>
+
+### 3. Load Environment Variables
+
+Install python-dotenv:
+
+```bash
+pip install python-dotenv
+```
+
+Load environment variables in your application:
+
+```python
+import os
+from dotenv import load_dotenv
+from inventpay import InventPayClient
+
+load_dotenv()
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+```
+
+## Framework-Specific Setup
+
+### Django
+
+<Steps>
+  <Step title="Install Package">
+    ```bash
+    pip install inventpay
+    ```
+  </Step>
+
+  <Step title="Add to settings.py">
+    ```python settings.py
+    # settings.py
+    import os
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
+    # InventPay Configuration
+    INVENTPAY_API_KEY = os.getenv('INVENTPAY_API_KEY')
+    INVENTPAY_API_URL = os.getenv(
+        'INVENTPAY_API_URL',
+        'https://api.inventpay.io'
+    )
+    ```
+
+  </Step>
+
+  <Step title="Create Client Service">
+    ```python payments/services.py
+    from django.conf import settings
+    from inventpay import InventPayClient
+
+    class InventPayService:
+        _client = None
+
+        @classmethod
+        def get_client(cls):
+            if cls._client is None:
+                cls._client = InventPayClient(
+                    api_key=settings.INVENTPAY_API_KEY,
+                    base_url=settings.INVENTPAY_API_URL,
+                )
+            return cls._client
+
+    inventpay = InventPayService.get_client()
+    ```
+
+  </Step>
+
+  <Step title="Use in Views">
+    ```python payments/views.py
+    from django.http import JsonResponse
+    from django.views.decorators.http import require_http_methods
+    from .services import inventpay
+
+    @require_http_methods(["POST"])
+    def create_payment(request):
+        amount = request.POST.get('amount')
+        currency = request.POST.get('currency')
+
+        payment = inventpay.payments.create(
+            amount=amount,
+            currency=currency,
+            callback_url=request.build_absolute_uri('/webhooks/inventpay/'),
+        )
+
+        return JsonResponse({
+            'payment_id': payment.id,
+            'payment_address': payment.payment_address,
+            'amount': payment.amount,
+        })
+    ```
+
+  </Step>
+</Steps>
+
+### Flask
+
+```python app.py
+import os
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+from inventpay import InventPayClient
+
+load_dotenv()
+
+app = Flask(__name__)
+
+# Initialize InventPay client
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+@app.route('/api/payments', methods=['POST'])
+def create_payment():
+    data = request.json
+
+    try:
+        payment = client.payments.create(
+            amount=data['amount'],
+            currency=data['currency'],
+            description=data.get('description'),
+            callback_url=f"{request.host_url}webhooks/inventpay",
+        )
+
+        return jsonify({
+            'payment_id': payment.id,
+            'payment_address': payment.payment_address,
+            'amount': payment.amount,
+            'currency': payment.currency,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/webhooks/inventpay', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('X-InventPay-Signature')
+    payload = request.get_data(as_text=True)
+
+    try:
+        event = client.webhooks.verify(payload, signature)
+
+        if event.type == 'payment.confirmed':
+            # Handle payment confirmation
+            print(f"Payment confirmed: {event.data.id}")
+
+        return 'OK', 200
+    except Exception as e:
+        return 'Invalid signature', 400
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+### FastAPI
+
+```python main.py
+import os
+from fastapi import FastAPI, HTTPException, Header, Request
+from pydantic import BaseModel
+from dotenv import load_dotenv
+from inventpay import InventPayClient
+
+load_dotenv()
+
+app = FastAPI()
+
+# Initialize InventPay client
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+class PaymentCreate(BaseModel):
+    amount: str
+    currency: str
+    description: str | None = None
+
+@app.post('/api/payments')
+async def create_payment(payment: PaymentCreate):
+    try:
+        result = client.payments.create(
+            amount=payment.amount,
+            currency=payment.currency,
+            description=payment.description,
+            callback_url='https://yoursite.com/webhooks/inventpay',
+        )
+
+        return {
+            'payment_id': result.id,
+            'payment_address': result.payment_address,
+            'amount': result.amount,
+            'currency': result.currency,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/webhooks/inventpay')
+async def handle_webhook(
+    request: Request,
+    x_inventpay_signature: str = Header(...)
+):
+    try:
+        body = await request.body()
+        event = client.webhooks.verify(
+            body.decode(),
+            x_inventpay_signature
+        )
+
+        if event.type == 'payment.confirmed':
+            print(f"Payment confirmed: {event.data.id}")
+
+        return {'status': 'ok'}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail='Invalid signature')
+```
+
+### Async Support
+
+The SDK supports both synchronous and asynchronous usage:
+
+```python
+import asyncio
+from inventpay import AsyncInventPayClient
+
+async def main():
+    client = AsyncInventPayClient(api_key='your-api-key')
+
+    # All methods support async/await
+    payment = await client.payments.create(
+        amount='100.00',
+        currency='BTC',
+    )
+
+    print(payment.payment_address)
+
+    await client.close()  # Don't forget to close!
+
+# Run async code
+asyncio.run(main())
+```
+
+## Verification
+
+Verify your installation by creating a simple test:
+
+```python test.py
+import os
+from dotenv import load_dotenv
+from inventpay import InventPayClient
+
+load_dotenv()
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+try:
+    balances = client.balances.get_all()
+    print('✅ Successfully connected to InventPay API')
+    print('Your balances:')
+    for balance in balances:
+        print(f"  {balance.currency}: {balance.available}")
+except Exception as e:
+    print('❌ Connection failed:', str(e))
+```
+
+Run the test:
+
+```bash
+python test.py
+```
+
+## Troubleshooting
+
+<Accordion title="ImportError: No module named 'inventpay'">
+  **Cause**: The SDK is not installed or not installed in the active Python environment.
+
+**Solution**:
+
+```bash
+# Check if installed
+pip show inventpay
+
+# Reinstall
+pip install --upgrade inventpay
+
+# If using virtual environment, make sure it's activated
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+```
+
+</Accordion>
+
+<Accordion title="AuthenticationError: Invalid API key">
+  **Cause**: Your API key is incorrect or not loaded properly.
+
+**Solution**:
+
+1. Check that your `.env` file contains the correct API key
+2. Ensure you're loading environment variables with `python-dotenv`
+3. Verify the API key in your [Dashboard](https://inventpay.io/dashboard/settings/api-keys)
+4. Make sure you're using the correct environment (test/live)
+
+```python
+# Debug: Print the loaded API key (remove in production!)
+print(os.getenv('INVENTPAY_API_KEY'))
+```
+
+</Accordion>
+
+<Accordion title="SSL/TLS errors">
+  **Cause**: Python SSL certificates are not properly configured.
+
+**Solution**:
+
+```bash
+# Update certifi
+pip install --upgrade certifi
+
+# On macOS, run the Install Certificates command
+/Applications/Python\ 3.x/Install\ Certificates.command
+```
+
+</Accordion>
+
+<Accordion title="Type hints not working">
+  **Cause**: IDE may not recognize type hints.
+
+**Solution**:
+
+```bash
+# Install typing extensions
+pip install typing-extensions
+
+# For VSCode, ensure Python extension is installed
+# For PyCharm, enable type checking in settings
+```
+
+</Accordion>
+
+<Accordion title="Async client not working">
+  **Cause**: Missing async dependencies.
+
+**Solution**:
+
+```bash
+# Install async dependencies
+pip install inventpay[async]
+
+# Or install aiohttp directly
+pip install aiohttp
+```
+
+</Accordion>
+
+## Requirements File
+
+For production deployments, create a `requirements.txt`:
+
+```txt requirements.txt
+inventpay>=1.0.0
+python-dotenv>=1.0.0
+# Add other dependencies
+```
+
+Or use `pyproject.toml` for modern Python projects:
+
+```toml pyproject.toml
+[project]
+name = "your-project"
+dependencies = [
+    "inventpay>=1.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+async = ["aiohttp>=3.8.0"]
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/sdks/python/configuration">
+    Learn about advanced configuration options
+  </Card>
+  <Card title="Usage Guide" icon="book-open" href="/sdks/python/usage">
+    Start using the SDK in your application
+  </Card>
+  <Card title="Examples" icon="code" href="/sdks/python/examples">
+    See real-world code examples
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Complete API documentation
+  </Card>
+</CardGroup>

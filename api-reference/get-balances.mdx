@@ -1,0 +1,253 @@
+---
+title: "Get Balances"
+description: "Retrieve balances for all supported cryptocurrencies"
+api: "GET /v1/merchant/balance"
+---
+
+## Overview
+
+This endpoint retrieves your account balances across all supported cryptocurrencies, including available balance, total earned, total withdrawn, and withdrawal limits.
+
+Use this endpoint to check your available funds before creating a withdrawal.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key **Example:** `cmfnz7jei0005p54eekx4e6mb`
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Balance information object
+  <Expandable title="data properties">
+    <ResponseField name="merchantId" type="string">
+      Your merchant account ID **Example:** `"cmf123abc..."`
+    </ResponseField>
+
+    <ResponseField name="businessName" type="string">
+      Your registered business name **Example:** `"Your Business Name"`
+    </ResponseField>
+
+    <ResponseField name="balances" type="object">
+      Balances for each cryptocurrency
+      <Expandable title="balances structure">
+        <ResponseField name="BTC" type="object">
+          <Expandable title="BTC balance properties">
+            <ResponseField name="availableBalance" type="number">
+              Available balance for withdrawal **Example:** `0.5`
+            </ResponseField>
+
+            <ResponseField name="totalEarned" type="number">
+              Total amount earned (all-time) **Example:** `1.2`
+            </ResponseField>
+
+            <ResponseField name="totalWithdrawn" type="number">
+              Total amount withdrawn (all-time) **Example:** `0.7`
+            </ResponseField>
+
+            <ResponseField name="pendingBalance" type="number">
+              Pending balance (awaiting confirmations) **Example:** `0.1`
+            </ResponseField>
+
+            <ResponseField name="limits" type="object">
+              Withdrawal limits
+              <Expandable title="limits properties">
+                <ResponseField name="daily" type="object">
+                  <ResponseField name="limit" type="number">
+                    Daily withdrawal limit **Example:** `10`
+                  </ResponseField>
+
+                  <ResponseField name="used" type="number">
+                    Amount withdrawn today **Example:** `0.5`
+                  </ResponseField>
+
+                  <ResponseField name="remaining" type="number">
+                    Remaining daily limit **Example:** `9.5`
+                  </ResponseField>
+                </ResponseField>
+
+                <ResponseField name="monthly" type="object">
+                  Similar structure to daily
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+
+        <ResponseField name="ETH" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="LTC" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="USDT_ERC20" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="USDT_BEP20" type="object">
+          Similar structure to BTC
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message **Example:** `"Balances retrieved successfully"`
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code **Example:** `200`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.inventpay.io/v1/merchant/balance \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+```javascript JavaScript/TypeScript
+const balances = await sdk.getBalances();
+
+console.log(balances.data.balances);
+
+// Access specific currency
+const btcBalance = balances.data.balances.BTC;
+console.log("BTC Available:", btcBalance.availableBalance);
+```
+
+```python Python
+balances = sdk.get_balances()
+
+print(balances.data['balances'])
+
+# Access specific currency
+btc_balance = balances.data['balances']['BTC']
+print(f"BTC Available: {btc_balance['availableBalance']}")
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - Success
+{
+  "success": true,
+  "data": {
+    "merchantId": "cmf123abc456def",
+    "businessName": "Your Business Name",
+    "balances": {
+      "BTC": {
+        "availableBalance": 0.5,
+        "totalEarned": 1.2,
+        "totalWithdrawn": 0.7,
+        "pendingBalance": 0.1,
+        "limits": {
+          "daily": {
+            "limit": 10,
+            "used": 0.5,
+            "remaining": 9.5
+          },
+          "monthly": {
+            "limit": 100,
+            "used": 5.2,
+            "remaining": 94.8
+          }
+        }
+      },
+      "ETH": {
+        "availableBalance": 2.1,
+        "totalEarned": 5.6,
+        "totalWithdrawn": 3.5,
+        "pendingBalance": 0.3,
+        "limits": {
+          "daily": {
+            "limit": 50,
+            "used": 2.1,
+            "remaining": 47.9
+          },
+          "monthly": {
+            "limit": 500,
+            "used": 25.5,
+            "remaining": 474.5
+          }
+        }
+      },
+      "USDT_BEP20": {
+        "availableBalance": 1500.75,
+        "totalEarned": 5000,
+        "totalWithdrawn": 3499.25,
+        "pendingBalance": 250.5,
+        "limits": {
+          "daily": {
+            "limit": 10000,
+            "used": 1500,
+            "remaining": 8500
+          },
+          "monthly": {
+            "limit": 100000,
+            "used": 15000,
+            "remaining": 85000
+          }
+        }
+      }
+    }
+  },
+  "message": "Balances retrieved successfully",
+  "statusCode": 200
+}
+```
+
+```json 401 - Unauthorized
+{
+  "success": false,
+  "error": "Invalid API key",
+  "statusCode": 401
+}
+```
+
+## Understanding Balance Fields
+
+| Field              | Description                                        |
+| ------------------ | -------------------------------------------------- |
+| `availableBalance` | Funds available for immediate withdrawal           |
+| `totalEarned`      | Lifetime total of all payments received            |
+| `totalWithdrawn`   | Lifetime total of all withdrawals made             |
+| `pendingBalance`   | Payments received but still awaiting confirmations |
+
+<Info>
+  Only `availableBalance` can be withdrawn. Funds in `pendingBalance` will move
+  to `availableBalance` once they receive the required confirmations.
+</Info>
+
+## Withdrawal Limits
+
+Withdrawal limits are in place to ensure security:
+
+- **Daily Limit:** Resets every 24 hours
+- **Monthly Limit:** Resets on the 1st of each month
+- **Custom Limits:** Contact support to request higher limits
+
+<Warning>
+  Attempting to withdraw more than your available limit will result in a
+  validation error.
+</Warning>
+
+## Error Codes
+
+| Status Code | Description                     |
+| ----------- | ------------------------------- |
+| 200         | Balances retrieved successfully |
+| 401         | Invalid or missing API key      |
+| 429         | Rate limit exceeded             |
+| 500         | Internal server error           |

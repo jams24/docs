@@ -1,0 +1,445 @@
+---
+title: "JavaScript SDK Configuration"
+description: "Configure the InventPay JavaScript/TypeScript SDK with advanced options"
+---
+
+## Basic Configuration
+
+The most basic configuration only requires an API key:
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: "your-api-key",
+});
+```
+
+## Configuration Options
+
+Here are all available configuration options:
+
+```typescript
+interface InventPayConfig {
+  // Required
+  apiKey: string;
+
+  // Optional
+  baseURL?: string;
+  timeout?: number;
+  maxRetries?: number;
+  retryDelay?: number;
+  debug?: boolean;
+  userAgent?: string;
+}
+```
+
+### API Key
+
+**Required** - Your InventPay API key.
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+```
+
+<Warning>
+  Always use environment variables for API keys. Never hardcode them in your
+  source code.
+</Warning>
+
+### Base URL
+
+**Optional** - The base URL for API requests. Defaults to `https://api.inventpay.io`.
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  baseURL: "https://sandbox-api.inventpay.io", // For testing
+});
+```
+
+<Tip>
+  Use the sandbox environment for development and testing: - **Production**:
+  `https://api.inventpay.io` - **Sandbox**: `https://sandbox-api.inventpay.io`
+</Tip>
+
+### Timeout
+
+**Optional** - Request timeout in milliseconds. Defaults to `30000` (30 seconds).
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  timeout: 60000, // 60 seconds
+});
+```
+
+### Max Retries
+
+**Optional** - Maximum number of automatic retries for failed requests. Defaults to `3`.
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  maxRetries: 5, // Retry up to 5 times
+});
+```
+
+### Retry Delay
+
+**Optional** - Delay between retries in milliseconds. Defaults to `1000` (1 second).
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  retryDelay: 2000, // 2 seconds between retries
+});
+```
+
+The SDK uses exponential backoff for retries:
+
+- 1st retry: 1 second
+- 2nd retry: 2 seconds
+- 3rd retry: 4 seconds
+- etc.
+
+### Debug Mode
+
+**Optional** - Enable debug logging. Defaults to `false`.
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  debug: true,
+});
+```
+
+<Warning>
+  Never enable debug mode in production as it may log sensitive information.
+</Warning>
+
+### User Agent
+
+**Optional** - Custom user agent string for requests.
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  userAgent: "MyApp/1.0.0",
+});
+```
+
+## Environment-Specific Configuration
+
+### Development
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  baseURL: "https://sandbox-api.inventpay.io",
+  debug: true,
+  timeout: 60000,
+});
+```
+
+### Production
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  baseURL: "https://api.inventpay.io",
+  debug: false,
+  timeout: 30000,
+  maxRetries: 3,
+});
+```
+
+### Testing
+
+```typescript
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_TEST_API_KEY!,
+  baseURL: "https://sandbox-api.inventpay.io",
+  debug: true,
+  timeout: 10000,
+  maxRetries: 0, // No retries in tests for faster failures
+});
+```
+
+## Advanced Patterns
+
+### Singleton Pattern
+
+Create a single instance to reuse across your application:
+
+```typescript lib/inventpay.ts
+import { InventPayClient } from "@inventpay/sdk";
+
+let client: InventPayClient | null = null;
+
+export function getInventPayClient(): InventPayClient {
+  if (!client) {
+    client = new InventPayClient({
+      apiKey: process.env.INVENTPAY_API_KEY!,
+      baseURL: process.env.INVENTPAY_API_URL || "https://api.inventpay.io",
+      debug: process.env.NODE_ENV !== "production",
+    });
+  }
+  return client;
+}
+```
+
+Usage:
+
+```typescript
+import { getInventPayClient } from './lib/inventpay';
+
+const client = getInventPayClient();
+const payment = await client.payments.create({ ... });
+```
+
+### Factory Pattern
+
+Create clients with different configurations:
+
+```typescript lib/inventpay-factory.ts
+import { InventPayClient } from "@inventpay/sdk";
+
+export class InventPayFactory {
+  static createProduction(): InventPayClient {
+    return new InventPayClient({
+      apiKey: process.env.INVENTPAY_API_KEY!,
+      baseURL: "https://api.inventpay.io",
+      debug: false,
+      maxRetries: 3,
+    });
+  }
+
+  static createSandbox(): InventPayClient {
+    return new InventPayClient({
+      apiKey: process.env.INVENTPAY_TEST_API_KEY!,
+      baseURL: "https://sandbox-api.inventpay.io",
+      debug: true,
+      maxRetries: 1,
+    });
+  }
+
+  static create(): InventPayClient {
+    return process.env.NODE_ENV === "production"
+      ? this.createProduction()
+      : this.createSandbox();
+  }
+}
+```
+
+Usage:
+
+```typescript
+import { InventPayFactory } from "./lib/inventpay-factory";
+
+const client = InventPayFactory.create();
+```
+
+### Dependency Injection
+
+For frameworks like NestJS:
+
+```typescript inventpay.module.ts
+import { Module, Global } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { InventPayClient } from "@inventpay/sdk";
+
+export const INVENTPAY_CLIENT = "INVENTPAY_CLIENT";
+
+@Global()
+@Module({
+  imports: [ConfigModule],
+  providers: [
+    {
+      provide: INVENTPAY_CLIENT,
+      useFactory: (config: ConfigService) => {
+        return new InventPayClient({
+          apiKey: config.get("INVENTPAY_API_KEY")!,
+          baseURL: config.get("INVENTPAY_API_URL"),
+          debug: config.get("NODE_ENV") !== "production",
+        });
+      },
+      inject: [ConfigService],
+    },
+  ],
+  exports: [INVENTPAY_CLIENT],
+})
+export class InventPayModule {}
+```
+
+## Error Handling Configuration
+
+### Custom Error Handler
+
+```typescript
+import { InventPayClient, InventPayError } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+// Add custom error handling
+async function safeApiCall<T>(apiCall: () => Promise<T>): Promise<T | null> {
+  try {
+    return await apiCall();
+  } catch (error) {
+    if (error instanceof InventPayError) {
+      console.error("InventPay API Error:", {
+        status: error.statusCode,
+        message: error.message,
+        code: error.code,
+      });
+    } else {
+      console.error("Unexpected error:", error);
+    }
+    return null;
+  }
+}
+
+// Usage
+const payment = await safeApiCall(() =>
+  client.payments.create({
+    amount: "100.00",
+    currency: "BTC",
+  })
+);
+```
+
+### Retry Configuration
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+// Aggressive retry strategy
+const aggressiveClient = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  maxRetries: 5,
+  retryDelay: 500, // Start with 500ms
+});
+
+// Conservative retry strategy
+const conservativeClient = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  maxRetries: 1,
+  retryDelay: 2000, // Wait 2s before retry
+});
+
+// No retries (fail fast)
+const failFastClient = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  maxRetries: 0,
+});
+```
+
+## Environment Variables
+
+Recommended environment variables for your `.env` file:
+
+```bash .env
+# Required
+INVENTPAY_API_KEY=ipay_live_1234567890abcdef
+
+# Optional
+INVENTPAY_API_URL=https://api.inventpay.io
+INVENTPAY_TIMEOUT=30000
+INVENTPAY_MAX_RETRIES=3
+INVENTPAY_DEBUG=false
+
+# Test/Sandbox
+INVENTPAY_TEST_API_KEY=ipay_test_1234567890abcdef
+INVENTPAY_TEST_API_URL=https://sandbox-api.inventpay.io
+```
+
+Load configuration from environment:
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  baseURL: process.env.INVENTPAY_API_URL,
+  timeout: parseInt(process.env.INVENTPAY_TIMEOUT || "30000"),
+  maxRetries: parseInt(process.env.INVENTPAY_MAX_RETRIES || "3"),
+  debug: process.env.INVENTPAY_DEBUG === "true",
+});
+```
+
+## TypeScript Configuration
+
+### Type Safety
+
+The SDK includes full TypeScript types:
+
+```typescript
+import type {
+  Payment,
+  Invoice,
+  Balance,
+  Withdrawal,
+  InventPayConfig,
+} from "@inventpay/sdk";
+
+// Type-safe configuration
+const config: InventPayConfig = {
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  baseURL: "https://api.inventpay.io",
+  timeout: 30000,
+};
+
+const client = new InventPayClient(config);
+
+// Type-safe responses
+const payment: Payment = await client.payments.create({
+  amount: "100.00",
+  currency: "BTC",
+});
+```
+
+### Generic Types
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+// Generic API response handler
+async function handleApiResponse<T>(apiCall: () => Promise<T>): Promise<T> {
+  try {
+    return await apiCall();
+  } catch (error) {
+    // Handle error
+    throw error;
+  }
+}
+
+const payment = await handleApiResponse(() =>
+  client.payments.create({ amount: "100", currency: "BTC" })
+);
+```
+
+## Best Practices
+
+<Check>Use environment variables for all sensitive configuration</Check>
+<Check>Create a singleton client instance for your application</Check>
+<Check>Use different API keys for development, staging, and production</Check>
+<Check>Enable debug mode only in development</Check>
+<Check>Configure appropriate timeouts for your use case</Check>
+<Check>Use retry logic for production stability</Check>
+<Check>Never expose API keys in client-side code</Check>
+<Check>Validate configuration on application startup</Check>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Usage Guide" icon="book-open" href="/sdks/javascript/usage">
+    Learn how to use the configured client
+  </Card>
+  <Card title="Examples" icon="code" href="/sdks/javascript/examples">
+    See configuration in real-world examples
+  </Card>
+</CardGroup>

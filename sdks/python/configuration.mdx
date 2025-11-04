@@ -1,0 +1,474 @@
+---
+title: "Python SDK Configuration"
+description: "Configure the InventPay Python SDK with advanced options"
+---
+
+## Basic Configuration
+
+The most basic configuration only requires an API key:
+
+```python
+from inventpay import InventPayClient
+
+client = InventPayClient(api_key='your-api-key')
+```
+
+## Configuration Options
+
+Here are all available configuration options:
+
+```python
+client = InventPayClient(
+    # Required
+    api_key='your-api-key',
+
+    # Optional
+    base_url='https://api.inventpay.io',
+    timeout=30,
+    max_retries=3,
+    retry_delay=1,
+    debug=False,
+    user_agent='MyApp/1.0.0',
+)
+```
+
+### API Key
+
+**Required** - Your InventPay API key.
+
+```python
+import os
+from inventpay import InventPayClient
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+```
+
+<Warning>
+  Always use environment variables for API keys. Never hardcode them in your
+  source code.
+</Warning>
+
+### Base URL
+
+**Optional** - The base URL for API requests. Defaults to `https://api.inventpay.io`.
+
+```python
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    base_url='https://sandbox-api.inventpay.io',  # For testing
+)
+```
+
+<Tip>
+  Use the sandbox environment for development and testing: - **Production**:
+  `https://api.inventpay.io` - **Sandbox**: `https://sandbox-api.inventpay.io`
+</Tip>
+
+### Timeout
+
+**Optional** - Request timeout in seconds. Defaults to `30`.
+
+```python
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    timeout=60,  # 60 seconds
+)
+```
+
+### Max Retries
+
+**Optional** - Maximum number of automatic retries for failed requests. Defaults to `3`.
+
+```python
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    max_retries=5,  # Retry up to 5 times
+)
+```
+
+### Retry Delay
+
+**Optional** - Delay between retries in seconds. Defaults to `1`.
+
+```python
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    retry_delay=2,  # 2 seconds between retries
+)
+```
+
+The SDK uses exponential backoff for retries:
+
+- 1st retry: 1 second
+- 2nd retry: 2 seconds
+- 3rd retry: 4 seconds
+- etc.
+
+### Debug Mode
+
+**Optional** - Enable debug logging. Defaults to `False`.
+
+```python
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    debug=True,
+)
+```
+
+<Warning>
+  Never enable debug mode in production as it may log sensitive information.
+</Warning>
+
+### User Agent
+
+**Optional** - Custom user agent string for requests.
+
+```python
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    user_agent='MyApp/1.0.0',
+)
+```
+
+## Environment-Specific Configuration
+
+### Development
+
+```python
+import os
+from inventpay import InventPayClient
+
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    base_url='https://sandbox-api.inventpay.io',
+    debug=True,
+    timeout=60,
+)
+```
+
+### Production
+
+```python
+import os
+from inventpay import InventPayClient
+
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    base_url='https://api.inventpay.io',
+    debug=False,
+    timeout=30,
+    max_retries=3,
+)
+```
+
+### Testing
+
+```python
+import os
+from inventpay import InventPayClient
+
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_TEST_API_KEY'),
+    base_url='https://sandbox-api.inventpay.io',
+    debug=True,
+    timeout=10,
+    max_retries=0,  # No retries in tests for faster failures
+)
+```
+
+## Advanced Patterns
+
+### Singleton Pattern
+
+Create a single instance to reuse across your application:
+
+```python lib/inventpay.py
+import os
+from inventpay import InventPayClient
+
+_client = None
+
+def get_inventpay_client():
+    global _client
+    if _client is None:
+        _client = InventPayClient(
+            api_key=os.getenv('INVENTPAY_API_KEY'),
+            base_url=os.getenv('INVENTPAY_API_URL', 'https://api.inventpay.io'),
+            debug=os.getenv('DEBUG', 'false').lower() == 'true',
+        )
+    return _client
+
+# Usage
+client = get_inventpay_client()
+```
+
+### Factory Pattern
+
+Create clients with different configurations:
+
+```python lib/inventpay_factory.py
+import os
+from inventpay import InventPayClient
+
+class InventPayFactory:
+    @staticmethod
+    def create_production():
+        return InventPayClient(
+            api_key=os.getenv('INVENTPAY_API_KEY'),
+            base_url='https://api.inventpay.io',
+            debug=False,
+            max_retries=3,
+        )
+
+    @staticmethod
+    def create_sandbox():
+        return InventPayClient(
+            api_key=os.getenv('INVENTPAY_TEST_API_KEY'),
+            base_url='https://sandbox-api.inventpay.io',
+            debug=True,
+            max_retries=1,
+        )
+
+    @staticmethod
+    def create():
+        env = os.getenv('ENVIRONMENT', 'development')
+        if env == 'production':
+            return InventPayFactory.create_production()
+        return InventPayFactory.create_sandbox()
+
+# Usage
+client = InventPayFactory.create()
+```
+
+### Context Manager
+
+Use the client as a context manager for automatic cleanup:
+
+```python
+from inventpay import InventPayClient
+
+with InventPayClient(api_key='your-api-key') as client:
+    payment = client.payments.create(
+        amount='100.00',
+        currency='BTC',
+    )
+    print(payment.id)
+
+# Client is automatically closed
+```
+
+## Async Configuration
+
+For async applications, use `AsyncInventPayClient`:
+
+```python
+import os
+from inventpay import AsyncInventPayClient
+
+async def main():
+    client = AsyncInventPayClient(
+        api_key=os.getenv('INVENTPAY_API_KEY'),
+        base_url='https://api.inventpay.io',
+        timeout=30,
+    )
+
+    try:
+        payment = await client.payments.create(
+            amount='100.00',
+            currency='BTC',
+        )
+        print(payment.id)
+    finally:
+        await client.close()
+
+# Or use as context manager
+async def main_with_context():
+    async with AsyncInventPayClient(api_key=os.getenv('INVENTPAY_API_KEY')) as client:
+        payment = await client.payments.create(
+            amount='100.00',
+            currency='BTC',
+        )
+```
+
+## Error Handling Configuration
+
+### Custom Error Handler
+
+```python
+from inventpay import InventPayClient, InventPayError
+from typing import TypeVar, Callable, Optional
+
+T = TypeVar('T')
+
+def safe_api_call(func: Callable[[], T]) -> Optional[T]:
+    try:
+        return func()
+    except InventPayError as e:
+        print(f"InventPay API Error: {e.status_code} - {e.message}")
+        if hasattr(e, 'code'):
+            print(f"Error code: {e.code}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
+
+# Usage
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+payment = safe_api_call(lambda: client.payments.create(
+    amount='100.00',
+    currency='BTC',
+))
+
+if payment:
+    print(f"Payment created: {payment.id}")
+```
+
+### Retry Configuration
+
+```python
+from inventpay import InventPayClient
+
+# Aggressive retry strategy
+aggressive_client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    max_retries=5,
+    retry_delay=0.5,  # Start with 500ms
+)
+
+# Conservative retry strategy
+conservative_client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    max_retries=1,
+    retry_delay=2,  # Wait 2s before retry
+)
+
+# No retries (fail fast)
+fail_fast_client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    max_retries=0,
+)
+```
+
+## Environment Variables
+
+Recommended environment variables for your `.env` file:
+
+```bash .env
+# Required
+INVENTPAY_API_KEY=ipay_live_1234567890abcdef
+
+# Optional
+INVENTPAY_API_URL=https://api.inventpay.io
+INVENTPAY_TIMEOUT=30
+INVENTPAY_MAX_RETRIES=3
+INVENTPAY_DEBUG=false
+
+# Test/Sandbox
+INVENTPAY_TEST_API_KEY=ipay_test_1234567890abcdef
+INVENTPAY_TEST_API_URL=https://sandbox-api.inventpay.io
+```
+
+Load configuration from environment:
+
+```python
+import os
+from inventpay import InventPayClient
+
+client = InventPayClient(
+    api_key=os.getenv('INVENTPAY_API_KEY'),
+    base_url=os.getenv('INVENTPAY_API_URL'),
+    timeout=int(os.getenv('INVENTPAY_TIMEOUT', '30')),
+    max_retries=int(os.getenv('INVENTPAY_MAX_RETRIES', '3')),
+    debug=os.getenv('INVENTPAY_DEBUG', 'false').lower() == 'true',
+)
+```
+
+## Type Hints
+
+The SDK includes full type hints for better IDE support:
+
+```python
+from inventpay import InventPayClient
+from inventpay.types import Payment, Invoice, Balance
+
+client: InventPayClient = InventPayClient(api_key='your-api-key')
+
+# Type-safe responses
+payment: Payment = client.payments.create(
+    amount='100.00',
+    currency='BTC',
+)
+
+balance: Balance = client.balances.get_by_currency('BTC')
+```
+
+## Django Settings
+
+For Django projects, add InventPay configuration to settings:
+
+```python settings.py
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# InventPay Configuration
+INVENTPAY_API_KEY = os.getenv('INVENTPAY_API_KEY')
+INVENTPAY_API_URL = os.getenv('INVENTPAY_API_URL', 'https://api.inventpay.io')
+INVENTPAY_DEBUG = DEBUG  # Use Django's DEBUG setting
+INVENTPAY_TIMEOUT = 30
+INVENTPAY_MAX_RETRIES = 3
+```
+
+Create a service to access the client:
+
+```python services/inventpay.py
+from django.conf import settings
+from inventpay import InventPayClient
+
+class InventPayService:
+    _client = None
+
+    @classmethod
+    def get_client(cls) -> InventPayClient:
+        if cls._client is None:
+            cls._client = InventPayClient(
+                api_key=settings.INVENTPAY_API_KEY,
+                base_url=settings.INVENTPAY_API_URL,
+                debug=settings.INVENTPAY_DEBUG,
+                timeout=settings.INVENTPAY_TIMEOUT,
+                max_retries=settings.INVENTPAY_MAX_RETRIES,
+            )
+        return cls._client
+
+# Usage
+inventpay = InventPayService.get_client()
+```
+
+## Best Practices
+
+<Check>Use environment variables for all sensitive configuration</Check>
+<Check>Create a singleton client instance for your application</Check>
+<Check>Use different API keys for development, staging, and production</Check>
+<Check>Enable debug mode only in development</Check>
+<Check>Configure appropriate timeouts for your use case</Check>
+<Check>Use retry logic for production stability</Check>
+<Check>Use type hints for better IDE support</Check>
+<Check>Validate configuration on application startup</Check>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Usage Guide" icon="book-open" href="/sdks/python/usage">
+    Learn how to use the configured client
+  </Card>
+  <Card title="Examples" icon="code" href="/sdks/python/examples">
+    See configuration in real-world examples
+  </Card>
+</CardGroup>

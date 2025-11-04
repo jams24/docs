@@ -1,0 +1,467 @@
+---
+title: "Webhooks Overview"
+description: "Real-time notifications for payment and account events"
+---
+
+## What are Webhooks?
+
+Webhooks are HTTP callbacks that InventPay sends to your server when specific events occur in your account. Instead of constantly polling our API to check for status changes, webhooks push notifications to you in real-time.
+
+<CardGroup cols={2}>
+  <Card title="Real-time Updates" icon="bolt">
+    Instant notifications when events occur
+  </Card>
+  <Card title="Reduced API Calls" icon="arrow-trend-down">
+    No need to poll for status changes
+  </Card>
+  <Card title="Automatic Retry" icon="rotate">
+    Failed deliveries automatically retried
+  </Card>
+  <Card title="Secure" icon="lock">
+    HMAC signature verification included
+  </Card>
+</CardGroup>
+
+## Why Use Webhooks?
+
+### Without Webhooks (Polling)
+
+``
+
+`mermaid
+sequenceDiagram
+participant Your Server
+participant InventPay API
+
+    loop Every 30 seconds
+        Your Server->>InventPay API: Check payment status?
+        InventPay API-->>Your Server: Still pending
+    end
+
+    Your Server->>InventPay API: Check payment status?
+    InventPay API-->>Your Server: Completed!
+
+````
+
+**Problems:**
+- Wastes API calls
+- Delays in detection
+- Increased server load
+- Poor user experience
+
+### With Webhooks
+```mermaid
+sequenceDiagram
+    participant Customer
+    participant InventPay
+    participant Your Server
+
+    Customer->>InventPay: Sends payment
+    InventPay->>InventPay: Confirms payment
+    InventPay->>Your Server: Webhook: Payment completed
+    Your Server->>Customer: Order fulfilled
+````
+
+**Benefits:**
+
+- Instant notifications
+- No wasted API calls
+- Better user experience
+- Reduced server load
+
+## Available Webhook Events
+
+InventPay sends webhooks for various events throughout the payment lifecycle:
+
+### Payment Events
+
+<AccordionGroup>
+  <Accordion title="payment.created" icon="plus">
+    Sent when a new payment or invoice is created
+    
+    **Use for:**
+    - Logging payment requests
+    - Sending payment link to customer
+    - Tracking conversion funnel
+  </Accordion>
+
+{" "}
+<Accordion title="payment.pending" icon="clock">
+  Sent when payment is received but awaiting confirmations **Use for:** -
+  Notifying customer payment was detected - Updating order status to
+  "processing" - Showing confirmation progress
+</Accordion>
+
+{" "}
+<Accordion title="payment.confirmed" icon="check">
+  Sent when payment reaches required confirmations **Use for:** - Fulfilling
+  orders - Sending confirmation emails - Updating inventory - Recording
+  completed transaction
+</Accordion>
+
+{" "}
+<Accordion title="payment.underpaid" icon="triangle-exclamation">
+  Sent when customer sends less than required amount **Use for:** - Notifying
+  customer of shortfall - Requesting additional payment - Handling partial
+  refunds
+</Accordion>
+
+{" "}
+<Accordion title="payment.expired" icon="calendar-xmark">
+  Sent when payment window closes without receiving full payment **Use for:** -
+  Canceling orders - Releasing reserved inventory - Notifying customer
+</Accordion>
+
+  <Accordion title="payment.failed" icon="xmark">
+    Sent when payment encounters an error
+    
+    **Use for:**
+    - Error logging
+    - Customer notification
+    - Creating new payment if needed
+  </Accordion>
+</AccordionGroup>
+
+### Withdrawal Events
+
+<AccordionGroup>
+  <Accordion title="withdrawal.created" icon="plus">
+    Sent when withdrawal request is created
+    
+    **Use for:**
+    - Logging withdrawal requests
+    - Notifying finance team
+  </Accordion>
+
+{" "}
+<Accordion title="withdrawal.processing" icon="spinner">
+  Sent when withdrawal is submitted to blockchain **Use for:** - Tracking
+  transaction hash - Updating internal records
+</Accordion>
+
+{" "}
+<Accordion title="withdrawal.completed" icon="circle-check">
+  Sent when withdrawal is confirmed on blockchain **Use for:** - Final
+  confirmation - Reconciliation - Accounting updates
+</Accordion>
+
+  <Accordion title="withdrawal.failed" icon="circle-xmark">
+    Sent when withdrawal fails (funds returned)
+    
+    **Use for:**
+    - Error handling
+    - Retry logic
+    - Notification to finance team
+  </Accordion>
+</AccordionGroup>
+
+## Webhook Workflow
+
+```mermaid
+graph LR
+    A[Event Occurs] --> B[InventPay Creates Webhook]
+    B --> C[Signs with Secret]
+    C --> D[POST to Your URL]
+    D --> E{Your Server}
+    E -->|Verify Signature| F[Process Event]
+    E -->|Invalid| G[Reject]
+    F --> H[Return 200 OK]
+    G --> I[Return 401]
+```
+
+## Webhook Delivery
+
+### Request Format
+
+InventPay sends webhooks as HTTP POST requests with:
+
+**Headers:**
+
+```
+Content-Type: application/json
+X-Webhook-Signature: <HMAC-SHA256 signature>
+X-Webhook-Event: <event type>
+X-Webhook-ID: <unique delivery ID>
+X-Webhook-Timestamp: <ISO 8601 timestamp>
+```
+
+**Body:**
+
+```json
+{
+  "event": "payment.confirmed",
+  "data": {
+    "paymentId": "cmh123abc456",
+    "orderId": "order-12345",
+    "amount": "29.99",
+    "currency": "USDT_BEP20",
+    "status": "COMPLETED"
+  },
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+### Response Requirements
+
+Your webhook endpoint must:
+
+1. **Respond quickly** (within 5 seconds)
+2. **Return HTTP 200** for successful receipt
+3. **Verify signature** before processing
+4. **Be idempotent** (handle duplicate deliveries)
+
+<Warning>
+  Your endpoint must return a 200 status code within 5 seconds, or the delivery
+  will be marked as failed and retried.
+</Warning>
+
+## Retry Logic
+
+If webhook delivery fails, InventPay automatically retries:
+
+### Retry Schedule
+
+| Attempt   | Delay      | Total Time |
+| --------- | ---------- | ---------- |
+| 1st retry | 1 minute   | 1 min      |
+| 2nd retry | 5 minutes  | 6 min      |
+| 3rd retry | 15 minutes | 21 min     |
+| 4th retry | 1 hour     | 1h 21min   |
+| 5th retry | 3 hours    | 4h 21min   |
+| 6th retry | 6 hours    | 10h 21min  |
+
+### Retry Conditions
+
+Retries occur when:
+
+- Connection timeout
+- HTTP status code ≠ 200
+- Network errors
+- Server errors (5xx)
+
+Retries DON'T occur when:
+
+- HTTP 200 returned (even if body indicates error)
+- Invalid SSL certificate
+- Too many redirects
+
+<Info>
+  After 6 failed attempts, the webhook is marked as failed and delivery stops.
+  You can view failed webhooks in your dashboard.
+</Info>
+
+## Security
+
+### Signature Verification
+
+Every webhook includes an HMAC-SHA256 signature to verify authenticity:
+
+```javascript
+const crypto = require("crypto");
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(JSON.stringify(payload))
+    .digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+```
+
+<Card title="Webhook Security" icon="shield-halved" href="/webhooks/security">
+  Learn more about securing your webhooks
+</Card>
+
+## Testing Webhooks
+
+### Test Webhook Delivery
+
+You can test your webhook endpoint:
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+const testResult = await sdk.testWebhook();
+console.log(testResult.message); // "Webhook test successful"
+```
+
+```python Python
+test_result = sdk.test_webhook()
+print(test_result['message'])  # "Webhook test successful"
+```
+
+```bash cURL
+curl -X POST https://api.inventpay.io/v1/webhook/test \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+### Test Event Payload
+
+Test webhooks send a `payment.test` event:
+
+```json
+{
+  "event": "payment.test",
+  "data": {
+    "test": true,
+    "message": "This is a test webhook"
+  },
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+<Tip>
+  Always test your webhook endpoint before going live to ensure proper signature
+  verification and event handling.
+</Tip>
+
+## Monitoring Webhooks
+
+### Webhook Dashboard
+
+View webhook activity in your dashboard:
+
+- Delivery history (last 30 days)
+- Success/failure rates
+- Average response times
+- Failed deliveries requiring attention
+
+### Webhook Statistics API
+
+Get webhook stats programmatically:
+
+```javascript
+const stats = await sdk.getWebhookStats(7); // Last 7 days
+console.log(stats.data.summary.successRate); // "98.5%"
+```
+
+<Card
+  title="View Webhook Stats"
+  icon="chart-line"
+  href="https://inventpay.io/dashboard/webhooks"
+>
+  Monitor webhook performance in dashboard
+</Card>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Return 200 Immediately" icon="gauge-high">
+    Process webhooks asynchronously and return 200 quickly
+    
+    ```javascript
+    app.post('/webhook', (req, res) => {
+      // Return 200 immediately
+      res.status(200).send('OK');
+      
+      // Process asynchronously
+      processWebhook(req.body).catch(console.error);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Verify Signatures" icon="shield-check">
+    Always verify webhook signatures before processing
+    
+    ```javascript
+    const isValid = verifySignature(req.body, req.headers['x-webhook-signature']);
+    if (!isValid) {
+      return res.status(401).send('Invalid signature');
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Handle Duplicates" icon="clone">
+    Use webhook ID or payment ID to prevent duplicate processing
+    
+    ```javascript
+    if (await db.webhookProcessed(webhookId)) {
+      return res.status(200).send('Already processed');
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Log Everything" icon="file-lines">
+    Log all webhook deliveries for debugging and auditing
+    
+    ```javascript
+    logger.info('Webhook received', {
+      event: req.body.event,
+      paymentId: req.body.data.paymentId,
+      webhookId: req.headers['x-webhook-id']
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Use HTTPS" icon="lock">
+    Only accept webhooks on HTTPS endpoints for security
+  </Accordion>
+</AccordionGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Webhooks Not Received" icon="circle-question">
+    **Possible causes:**
+    - Webhook URL not configured
+    - Firewall blocking requests
+    - Server not responding in time
+    
+    **Solutions:**
+    - Verify URL in dashboard
+    - Check firewall rules
+    - Optimize endpoint performance
+  </Accordion>
+
+{" "}
+<Accordion title="Signature Verification Fails" icon="circle-question">
+  **Possible causes:** - Wrong webhook secret - Body modified by middleware -
+  Incorrect signature calculation **Solutions:** - Verify secret from dashboard
+  - Use raw body for verification - Check signature algorithm
+</Accordion>
+
+  <Accordion title="Duplicate Webhooks" icon="circle-question">
+    **This is normal:** Retries may cause duplicates
+    
+    **Solution:** Implement idempotency using webhook ID or payment ID
+  </Accordion>
+</AccordionGroup>
+
+## Quick Start
+
+<Steps>
+  <Step title="Configure Webhook URL">
+    Set your webhook endpoint URL in the dashboard or via API
+  </Step>
+  <Step title="Implement Endpoint">
+    Create an HTTP POST endpoint to receive webhooks
+  </Step>
+  <Step title="Verify Signatures">
+    Implement signature verification for security
+  </Step>
+  <Step title="Handle Events">Process different event types appropriately</Step>
+  <Step title="Test">Use test webhook to verify everything works</Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Setup Guide" icon="wrench" href="/webhooks/setup">
+    Complete webhook setup instructions
+  </Card>
+  <Card title="Event Reference" icon="list" href="/webhooks/events">
+    All webhook events and payloads
+  </Card>
+  <Card title="Security Guide" icon="shield-halved" href="/webhooks/security">
+    Secure your webhook endpoint
+  </Card>
+  <Card title="Example Code" icon="code" href="/sdks/javascript/examples">
+    See complete webhook examples
+  </Card>
+</CardGroup>

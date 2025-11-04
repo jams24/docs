@@ -1,0 +1,200 @@
+---
+title: "Get Balance by Currency"
+description: "Retrieve balance for a specific cryptocurrency"
+api: "GET /v1/merchant/balance/{currency}"
+---
+
+## Overview
+
+This endpoint retrieves your account balance for a specific cryptocurrency, including available balance, total earned, total withdrawn, and withdrawal limits.
+
+Use this endpoint when you only need balance information for one cryptocurrency.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key **Example:** `cmfnz7jei0005p54eekx4e6mb`
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="currency" type="string" required>
+  The cryptocurrency to get balance for **Options:** `BTC`, `ETH`, `LTC`,
+  `USDT_ERC20`, `USDT_BEP20` **Example:** `"USDT_BEP20"`
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Balance information object
+  <Expandable title="data properties">
+    <ResponseField name="currency" type="string">
+      The cryptocurrency **Example:** `"USDT_BEP20"`
+    </ResponseField>
+
+    <ResponseField name="balance" type="object">
+      Balance details
+      <Expandable title="balance properties">
+        <ResponseField name="availableBalance" type="number">
+          Available balance for withdrawal **Example:** `1500.75`
+        </ResponseField>
+
+        <ResponseField name="totalEarned" type="number">
+          Total amount earned (all-time) **Example:** `5000`
+        </ResponseField>
+
+        <ResponseField name="totalWithdrawn" type="number">
+          Total amount withdrawn (all-time) **Example:** `3499.25`
+        </ResponseField>
+
+        <ResponseField name="pendingBalance" type="number">
+          Pending balance (awaiting confirmations) **Example:** `250.5`
+        </ResponseField>
+
+        <ResponseField name="limits" type="object">
+          Withdrawal limits
+          <Expandable title="limits properties">
+            <ResponseField name="daily" type="object">
+              <ResponseField name="limit" type="number">
+                Daily withdrawal limit **Example:** `10000`
+              </ResponseField>
+
+              <ResponseField name="used" type="number">
+                Amount withdrawn today **Example:** `1500`
+              </ResponseField>
+
+              <ResponseField name="remaining" type="number">
+                Remaining daily limit **Example:** `8500`
+              </ResponseField>
+
+              <ResponseField name="resetAt" type="string">
+                When the daily limit resets (ISO 8601) **Example:**
+                `"2024-01-02T00:00:00.000Z"`
+              </ResponseField>
+            </ResponseField>
+
+            <ResponseField name="monthly" type="object">
+              <ResponseField name="limit" type="number">
+                Monthly withdrawal limit **Example:** `100000`
+              </ResponseField>
+
+              <ResponseField name="used" type="number">
+                Amount withdrawn this month **Example:** `15000`
+              </ResponseField>
+
+              <ResponseField name="remaining" type="number">
+                Remaining monthly limit **Example:** `85000`
+              </ResponseField>
+
+              <ResponseField name="resetAt" type="string">
+                When the monthly limit resets (ISO 8601) **Example:**
+                `"2024-02-01T00:00:00.000Z"`
+              </ResponseField>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message **Example:** `"Balance retrieved successfully"`
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code **Example:** `200`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.inventpay.io/v1/merchant/balance/USDT_BEP20 \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+```javascript JavaScript/TypeScript
+const balance = await sdk.getBalance("USDT_BEP20");
+
+console.log("Available:", balance.data.balance.availableBalance);
+console.log("Pending:", balance.data.balance.pendingBalance);
+console.log("Daily Limit:", balance.data.balance.limits.daily.remaining);
+```
+
+```python Python
+balance = sdk.get_balance("USDT_BEP20")
+
+print(f"Available: {balance.data['balance']['availableBalance']}")
+print(f"Pending: {balance.data['balance']['pendingBalance']}")
+print(f"Daily Limit: {balance.data['balance']['limits']['daily']['remaining']}")
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - Success
+{
+  "success": true,
+  "data": {
+    "currency": "USDT_BEP20",
+    "balance": {
+      "availableBalance": 1500.75,
+      "totalEarned": 5000,
+      "totalWithdrawn": 3499.25,
+      "pendingBalance": 250.5,
+      "limits": {
+        "daily": {
+          "limit": 10000,
+          "used": 1500,
+          "remaining": 8500,
+          "resetAt": "2024-01-02T00:00:00.000Z"
+        },
+        "monthly": {
+          "limit": 100000,
+          "used": 15000,
+          "remaining": 85000,
+          "resetAt": "2024-02-01T00:00:00.000Z"
+        }
+      }
+    }
+  },
+  "message": "Balance retrieved successfully",
+  "statusCode": 200
+}
+```
+
+```json 400 - Invalid Currency
+{
+  "success": false,
+  "error": "Invalid currency",
+  "details": {
+    "currency": "Must be one of: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20"
+  },
+  "statusCode": 400
+}
+```
+
+```json 401 - Unauthorized
+{
+  "success": false,
+  "error": "Invalid API key",
+  "statusCode": 401
+}
+```
+
+## Error Codes
+
+| Status Code | Description                    |
+| ----------- | ------------------------------ |
+| 200         | Balance retrieved successfully |
+| 400         | Invalid currency parameter     |
+| 401         | Invalid or missing API key     |
+| 429         | Rate limit exceeded            |
+| 500         | Internal server error          |

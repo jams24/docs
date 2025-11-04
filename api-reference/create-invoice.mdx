@@ -1,0 +1,240 @@
+---
+title: "Create Invoice"
+description: "Create a multi-currency invoice where customers can choose their payment method"
+api: "POST /v1/create_invoice"
+---
+
+## Overview
+
+This endpoint creates a multi-currency invoice that allows customers to choose which cryptocurrency they want to pay with. The invoice displays conversion rates for all supported cryptocurrencies.
+
+Use this endpoint when you want to give customers flexibility in choosing their payment method.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key **Example:** `cmfnz7jei0005p54eekx4e6mb`
+</ParamField>
+
+## Request Body
+
+<ParamField body="amount" type="number" required>
+  The invoice amount in the specified `amountCurrency` **Example:** `49.99`
+</ParamField>
+
+<ParamField body="amountCurrency" type="string" required>
+  The currency of the amount field **Options:** `USD`, `USDT` **Example:**
+  `"USD"`
+</ParamField>
+
+<ParamField body="orderId" type="string" optional>
+  Your internal order/transaction ID for reference **Example:** `"order-67890"`
+</ParamField>
+
+<ParamField body="description" type="string" optional>
+  Description of the payment/product **Example:** `"E-commerce Purchase"`
+</ParamField>
+
+<ParamField body="expirationMinutes" type="number" optional>
+  Invoice expiration time in minutes (5-1440) **Default:** `60` **Example:**
+  `60`
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Invoice details object
+  <Expandable title="data properties">
+    <ResponseField name="paymentId" type="string">
+      Unique identifier for this invoice **Example:** `"cmh456def..."`
+    </ResponseField>
+
+    <ResponseField name="baseAmount" type="number">
+      Invoice amount in base currency **Example:** `49.99`
+    </ResponseField>
+
+    <ResponseField name="baseCurrency" type="string">
+      Base currency of the invoice **Example:** `"USDT"`
+    </ResponseField>
+
+    <ResponseField name="conversionRates" type="object">
+      Conversion rates for all supported cryptocurrencies
+      <Expandable title="conversionRates structure">
+        <ResponseField name="BTC" type="object">
+          <Expandable title="BTC properties">
+            <ResponseField name="cryptoAmount" type="number">
+              Amount in BTC **Example:** `0.0012`
+            </ResponseField>
+
+            <ResponseField name="price" type="number">
+              Current BTC price **Example:** `41500`
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+
+        <ResponseField name="ETH" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="LTC" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="USDT_ERC20" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="USDT_BEP20" type="object">
+          Similar structure to BTC
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="invoiceUrl" type="string">
+      Hosted invoice page URL **Example:**
+      `"https://inventpay.io/invoice/cmh456..."`
+    </ResponseField>
+
+    <ResponseField name="allowCurrencySelection" type="boolean">
+      Indicates if currency selection is enabled **Example:** `true`
+    </ResponseField>
+
+    <ResponseField name="orderId" type="string">
+      Your order ID (if provided) **Example:** `"order-67890"`
+    </ResponseField>
+
+    <ResponseField name="expiresAt" type="string">
+      Invoice expiration timestamp (ISO 8601) **Example:**
+      `"2024-01-01T13:00:00.000Z"`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message **Example:** `"Invoice created successfully"`
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code **Example:** `200`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.inventpay.io/v1/create_invoice \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 49.99,
+    "amountCurrency": "USD",
+    "orderId": "order-67890",
+    "description": "E-commerce Purchase",
+    "expirationMinutes": 60
+  }'
+```
+
+```javascript JavaScript/TypeScript
+const invoice = await sdk.createInvoice({
+  amount: 49.99,
+  amountCurrency: "USD",
+  orderId: "order-67890",
+  description: "E-commerce Purchase",
+  expirationMinutes: 60,
+});
+
+console.log(invoice.data);
+```
+
+```python Python
+from inventpay import InvoiceRequest
+
+invoice = sdk.create_invoice(
+    InvoiceRequest(
+        amount=49.99,
+        amount_currency="USD",
+        order_id="order-67890",
+        description="E-commerce Purchase",
+        expiration_minutes=60
+    )
+)
+
+print(invoice.data)
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - Success
+{
+  "success": true,
+  "data": {
+    "paymentId": "cmh456def789ghi",
+    "baseAmount": 49.99,
+    "baseCurrency": "USDT",
+    "conversionRates": {
+      "BTC": {
+        "cryptoAmount": 0.0012,
+        "price": 41500
+      },
+      "ETH": {
+        "cryptoAmount": 0.032,
+        "price": 3200
+      },
+      "LTC": {
+        "cryptoAmount": 0.85,
+        "price": 75
+      },
+      "USDT_ERC20": {
+        "cryptoAmount": 49.99,
+        "price": 1
+      },
+      "USDT_BEP20": {
+        "cryptoAmount": 49.99,
+        "price": 1
+      }
+    },
+    "invoiceUrl": "https://inventpay.io/invoice/cmh456def789ghi",
+    "allowCurrencySelection": true,
+    "orderId": "order-67890",
+    "expiresAt": "2024-01-01T13:00:00.000Z"
+  },
+  "message": "Invoice created successfully",
+  "statusCode": 200
+}
+```
+
+```json 401 - Unauthorized
+{
+  "success": false,
+  "error": "Invalid API key",
+  "statusCode": 401
+}
+```
+
+```json 400 - Bad Request
+{
+  "success": false,
+  "error": "Validation failed",
+  "details": {
+    "amount": "Amount must be greater than 0"
+  },
+  "statusCode": 400
+}
+```
+
+## Error Codes
+
+| Status Code | Description                  |
+| ----------- | ---------------------------- |
+| 200         | Invoice created successfully |
+| 400         | Invalid request parameters   |
+| 401         | Invalid or missing API key   |
+| 429         | Rate limit exceeded          |
+| 500         | Internal server error        |

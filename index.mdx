@@ -1,97 +1,118 @@
 ---
 title: "Introduction"
-description: "Welcome to the new home for your documentation"
+description: "Accept crypto payments in your apps with just a few lines of code"
 ---
 
-## Setting up
+## Welcome to InventPay
 
-Get your documentation site up and running in minutes.
+InventPay makes it simple to accept cryptocurrency payments in your applications. Whether you're building an e-commerce store, SaaS platform, or any application that needs to accept crypto, our SDKs help you get started in minutes.
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
+## Why InventPay?
+
+<CardGroup cols={2}>
+  <Card title="Easy Integration" icon="rocket">
+    Get started with just a few lines of code. Create payments, check balances,
+    and process withdrawals with simple API calls.
+  </Card>
+  <Card title="Multiple Cryptocurrencies" icon="coins">
+    Accept Bitcoin, Ethereum, Litecoin, and USDT (both ERC20 and BEP20
+    networks).
+  </Card>
+  <Card title="Real-time Notifications" icon="bell">
+    Stay updated with webhook notifications for every payment event.
+  </Card>
+  <Card title="Secure by Default" icon="shield-check">
+    Every payment gets a unique address. Built-in signature verification for
+    webhooks.
+  </Card>
+</CardGroup>
+
+## Quick Example
+
+Here's how easy it is to create a payment:
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+import { PaymentSDK } from "inventpay";
+
+const sdk = new PaymentSDK({
+  apiKey: "your-api-key",
+});
+
+const payment = await sdk.createPayment({
+  amount: 29.99,
+  currency: "USDT_BEP20",
+  orderId: "order-12345",
+});
+
+console.log(payment.data.invoiceUrl);
+```
+
+```python Python
+from inventpay import PaymentSDK, SDKConfig
+
+sdk = PaymentSDK(SDKConfig(api_key="your-api-key"))
+
+payment = sdk.create_payment({
+    "amount": 29.99,
+    "currency": "USDT_BEP20",
+    "order_id": "order-12345"
+})
+
+print(payment.data['invoiceUrl'])
+```
+
+</CodeGroup>
+
+## Choose Your SDK
+
+<CardGroup cols={2}>
+  <Card
+    title="JavaScript/TypeScript"
+    icon="js"
+    href="/sdks/javascript/installation"
+  >
+    For Node.js and browser applications with full TypeScript support
+  </Card>
+  <Card title="Python" icon="python" href="/sdks/python/installation">
+    For Python applications with type hints and async support
+  </Card>
+</CardGroup>
+
+## What You Can Do
+
+<Steps>
+  <Step title="Accept Payments">
+    Create payment requests and invoices for your customers in multiple
+    cryptocurrencies
+  </Step>
+  <Step title="Track Balances">
+    Monitor your balances across all supported cryptocurrencies in real-time
+  </Step>
+  <Step title="Withdraw Funds">
+    Send funds to any wallet address with built-in fee calculation
+  </Step>
+  <Step title="Handle Events">
+    Receive webhook notifications for completed payments and other events
+  </Step>
+</Steps>
+
+## Ready to Start?
+
+<Card title="Get Your API Key" icon="key" href="https://inventpay.io/dashboard">
+  Sign up and get your API key from the InventPay Dashboard
 </Card>
 
-## Make it yours
+<br />
 
-Design a docs site that looks great and empowers your users.
+Or jump right into the quickstart guide for your preferred language:
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+- [JavaScript/TypeScript Quickstart](/quickstart)
+- [Python Quickstart](/quickstart)
 
-## Create beautiful pages
+## Need Help?
 
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+- **Documentation Issues?** [Report on GitHub](https://github.com/inventpay/docs/issues)
+- **SDK Bugs?** Open an issue on the respective SDK repository
+- **General Support?** Email us at support@inventpay.io

@@ -1,0 +1,675 @@
+---
+title: "Webhook Events"
+description: "Complete reference of all webhook events and their payloads"
+---
+
+## Overview
+
+InventPay sends webhook notifications for various events throughout the payment and withdrawal lifecycle. This page documents all available webhook events and their payload structures.
+
+## Event Categories
+
+<CardGroup cols={2}>
+  <Card title="Payment Events" icon="credit-card">
+    6 events covering the complete payment lifecycle
+  </Card>
+  <Card title="Withdrawal Events" icon="arrow-right-from-bracket">
+    4 events for withdrawal status changes
+  </Card>
+  <Card title="Account Events" icon="user">
+    Coming soon: Balance alerts, API key changes
+  </Card>
+  <Card title="System Events" icon="bell">
+    Test events and system notifications
+  </Card>
+</CardGroup>
+
+## Payment Events
+
+### payment.created
+
+Sent immediately when a new payment or invoice is created.
+
+**When to expect:**
+
+- Right after calling `/v1/create_payment` or `/v1/create_invoice`
+- Within 1-2 seconds of creation
+
+**Use cases:**
+
+- Log payment requests in your system
+- Send payment link to customer via email/SMS
+- Track payment funnel analytics
+- Reserve inventory
+
+**Payload:**
+
+```json
+{
+  "event": "payment.created",
+  "data": {
+    "paymentId": "cmh123abc456def",
+    "orderId": "order-12345",
+    "amount": 29.99,
+    "baseAmount": 29.99,
+    "baseCurrency": "USD",
+    "currency": "USDT_BEP20",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    "invoiceUrl": "https://inventpay.io/invoice/cmh123abc456def",
+    "qrCode": "usdt_bep20:0x742d35Cc...?amount=29.99",
+    "description": "Premium Plan Subscription",
+    "status": "PENDING",
+    "expiresAt": "2024-01-01T12:30:00.000Z",
+    "createdAt": "2024-01-01T12:00:00.000Z"
+  },
+  "timestamp": "2024-01-01T12:00:00.500Z",
+  "test": false
+}
+```
+
+<Accordion title="Full Field Descriptions">
+  <ResponseField name="paymentId" type="string">
+    Unique payment identifier
+  </ResponseField>
+
+  <ResponseField name="orderId" type="string">
+    Your custom order ID (if provided)
+  </ResponseField>
+
+  <ResponseField name="amount" type="number">
+    Payment amount in cryptocurrency
+  </ResponseField>
+
+  <ResponseField name="baseAmount" type="number">
+    Original amount in base currency
+  </ResponseField>
+
+  <ResponseField name="baseCurrency" type="string">
+    Base currency (USD, USDT, etc.)
+  </ResponseField>
+
+  <ResponseField name="currency" type="string">
+    Cryptocurrency for payment
+  </ResponseField>
+
+  <ResponseField name="address" type="string">
+    Unique payment address
+  </ResponseField>
+
+  <ResponseField name="invoiceUrl" type="string">
+    Hosted payment page URL
+  </ResponseField>
+
+  <ResponseField name="status" type="string">
+    Always "PENDING" for created events
+  </ResponseField>
+</Accordion>
+
+---
+
+### payment.pending
+
+Sent when payment funds are detected on the blockchain but awaiting confirmations.
+
+**When to expect:**
+
+- When customer sends cryptocurrency
+- Before required confirmations are reached
+- Within seconds of transaction broadcast
+
+**Use cases:**
+
+- Show "Payment detected" message to customer
+- Update order status to "processing"
+- Display confirmation progress
+- Reduce fraud risk assessment
+
+**Payload:**
+
+```json
+{
+  "event": "payment.pending",
+  "data": {
+    "paymentId": "cmh123abc456def",
+    "orderId": "order-12345",
+    "amount": 29.99,
+    "currency": "USDT_BEP20",
+    "currentBalance": "29.99",
+    "confirmations": 5,
+    "requiredConfirmations": 15,
+    "status": "PENDING",
+    "transactionHash": "0x1234567890abcdef...",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+  },
+  "timestamp": "2024-01-01T12:10:00.000Z",
+  "test": false
+}
+```
+
+<Accordion title="Full Field Descriptions">
+  <ResponseField name="currentBalance" type="string">
+    Amount received so far
+  </ResponseField>
+
+  <ResponseField name="confirmations" type="number">
+    Current confirmation count
+  </ResponseField>
+
+  <ResponseField name="requiredConfirmations" type="number">
+    Confirmations needed for completion
+  </ResponseField>
+
+  <ResponseField name="transactionHash" type="string">
+    Blockchain transaction hash
+  </ResponseField>
+</Accordion>
+
+---
+
+### payment.confirmed / payment.completed
+
+Sent when payment receives required blockchain confirmations and is complete.
+
+**When to expect:**
+
+- After required confirmations (3-15 blocks)
+- BTC: ~30 minutes
+- ETH/USDT_ERC20: ~3 minutes
+- USDT_BEP20: ~45 seconds
+
+**Use cases:**
+
+- **Fulfill the order** (most important)
+- Send confirmation email to customer
+- Update inventory
+- Issue invoice/receipt
+- Trigger affiliate commissions
+- Update accounting systems
+
+**Payload:**
+
+```json
+{
+  "event": "payment.confirmed",
+  "data": {
+    "paymentId": "cmh123abc456def",
+    "orderId": "order-12345",
+    "amount": 29.99,
+    "currency": "USDT_BEP20",
+    "currentBalance": "29.99",
+    "settlementAmount": 29.85,
+    "feeAmount": 0.15,
+    "feeRate": 0.005,
+    "confirmations": 15,
+    "status": "COMPLETED",
+    "transactionHash": "0x1234567890abcdef...",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    "completedAt": "2024-01-01T12:15:00.000Z"
+  },
+  "timestamp": "2024-01-01T12:15:00.500Z",
+  "test": false
+}
+```
+
+<Accordion title="Full Field Descriptions">
+  <ResponseField name="settlementAmount" type="number">
+    Amount credited to your balance (after fees)
+  </ResponseField>
+
+  <ResponseField name="feeAmount" type="number">
+    Platform fee charged (in cryptocurrency)
+  </ResponseField>
+
+  <ResponseField name="feeRate" type="number">
+    Fee percentage (0.005 = 0.5%)
+  </ResponseField>
+
+  <ResponseField name="completedAt" type="string">
+    Completion timestamp (ISO 8601)
+  </ResponseField>
+</Accordion>
+
+<Warning>
+  This is the critical event for order fulfillment. Always wait for this event
+  before delivering goods or services.
+</Warning>
+
+---
+
+### payment.underpaid
+
+Sent when customer sends less than the required amount (below 95% of required).
+
+**When to expect:**
+
+- When received amount < 95% of required
+- Immediately after detection
+
+**Use cases:**
+
+- Notify customer of shortfall
+- Display remaining amount needed
+- Send reminder with payment details
+- Offer refund option
+- Update order to "partially paid" status
+
+**Payload:**
+
+```json
+{
+  "event": "payment.underpaid",
+  "data": {
+    "paymentId": "cmh123abc456def",
+    "orderId": "order-12345",
+    "requiredAmount": "29.99",
+    "currentBalance": "25.00",
+    "remainingAmount": "4.99",
+    "paidPercentage": 83.36,
+    "remainingPercentage": 16.64,
+    "currency": "USDT_BEP20",
+    "status": "PENDING",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    "expiresAt": "2024-01-01T12:30:00.000Z"
+  },
+  "timestamp": "2024-01-01T12:12:00.000Z",
+  "test": false
+}
+```
+
+<Accordion title="Full Field Descriptions">
+  <ResponseField name="requiredAmount" type="string">
+    Total amount needed
+  </ResponseField>
+
+  <ResponseField name="remainingAmount" type="string">
+    Still needed to complete payment
+  </ResponseField>
+
+  <ResponseField name="paidPercentage" type="number">
+    Percentage of required amount received
+  </ResponseField>
+
+  <ResponseField name="remainingPercentage" type="number">
+    Percentage still needed
+  </ResponseField>
+</Accordion>
+
+<Info>
+  Customers can send additional funds to the same address to complete the
+  payment before expiration.
+</Info>
+
+---
+
+### payment.expired
+
+Sent when payment expiration time is reached without receiving the full amount.
+
+**When to expect:**
+
+- At payment expiration time
+- Default: 30-60 minutes after creation
+
+**Use cases:**
+
+- Cancel the order
+- Release reserved inventory
+- Send expiration notification to customer
+- Offer to create new payment
+- Log abandoned cart for analytics
+
+**Payload:**
+
+```json
+{
+  "event": "payment.expired",
+  "data": {
+    "paymentId": "cmh123abc456def",
+    "orderId": "order-12345",
+    "amount": 29.99,
+    "currency": "USDT_BEP20",
+    "currentBalance": "0",
+    "wasUnderpaid": false,
+    "status": "EXPIRED",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    "expiresAt": "2024-01-01T12:30:00.000Z",
+    "createdAt": "2024-01-01T12:00:00.000Z"
+  },
+  "timestamp": "2024-01-01T12:30:00.500Z",
+  "test": false
+}
+```
+
+<Accordion title="Full Field Descriptions">
+  <ResponseField name="wasUnderpaid" type="boolean">
+    True if partial payment was received
+  </ResponseField>
+
+  <ResponseField name="currentBalance" type="string">
+    Final balance at expiration
+  </ResponseField>
+</Accordion>
+
+<Note>
+  If `wasUnderpaid` is true and `currentBalance` > 0, contact support to discuss
+  refund or manual completion options.
+</Note>
+
+---
+
+### payment.failed
+
+Sent when payment encounters a critical error.
+
+**When to expect:**
+
+- Rare: Only during system errors or blockchain issues
+- Immediately when error detected
+
+**Use cases:**
+
+- Log error for investigation
+- Notify customer of issue
+- Create new payment if needed
+- Alert technical team
+
+**Payload:**
+
+```json
+{
+  "event": "payment.failed",
+  "data": {
+    "paymentId": "cmh123abc456def",
+    "orderId": "order-12345",
+    "amount": 29.99,
+    "currency": "USDT_BEP20",
+    "status": "FAILED",
+    "error": "Blockchain network error",
+    "failureReason": "Unable to monitor address due to network issues",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+  },
+  "timestamp": "2024-01-01T12:05:00.000Z",
+  "test": false
+}
+```
+
+<Accordion title="Full Field Descriptions">
+  <ResponseField name="error" type="string">
+    Brief error description
+  </ResponseField>
+
+  <ResponseField name="failureReason" type="string">
+    Detailed failure reason
+  </ResponseField>
+</Accordion>
+
+---
+
+## Withdrawal Events
+
+### withdrawal.created
+
+Sent when a new withdrawal request is created.
+
+**Payload:**
+
+```json
+{
+  "event": "withdrawal.created",
+  "data": {
+    "withdrawalId": "cmh789ghi012jkl",
+    "amount": "100",
+    "currency": "USDT_BEP20",
+    "destinationAddress": "0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
+    "status": "PENDING",
+    "feeAmount": "0.60",
+    "netAmount": 100.0,
+    "serviceFee": 0.5,
+    "networkFee": 0.1,
+    "createdAt": "2024-01-01T13:00:00.000Z",
+    "description": "Monthly payout"
+  },
+  "timestamp": "2024-01-01T13:00:00.500Z",
+  "test": false
+}
+```
+
+---
+
+### withdrawal.processing
+
+Sent when withdrawal transaction is submitted to the blockchain.
+
+**Payload:**
+
+```json
+{
+  "event": "withdrawal.processing",
+  "data": {
+    "withdrawalId": "cmh789ghi012jkl",
+    "amount": "100",
+    "currency": "USDT_BEP20",
+    "destinationAddress": "0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
+    "status": "PROCESSING",
+    "transactionHash": "0xabcdef1234567890...",
+    "confirmations": 2,
+    "processedAt": "2024-01-01T13:05:00.000Z"
+  },
+  "timestamp": "2024-01-01T13:05:00.500Z",
+  "test": false
+}
+```
+
+---
+
+### withdrawal.completed
+
+Sent when withdrawal is confirmed on the blockchain.
+
+**Payload:**
+
+```json
+{
+  "event": "withdrawal.completed",
+  "data": {
+    "withdrawalId": "cmh789ghi012jkl",
+    "amount": "100",
+    "currency": "USDT_BEP20",
+    "destinationAddress": "0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
+    "status": "COMPLETED",
+    "transactionHash": "0xabcdef1234567890...",
+    "confirmations": 15,
+    "netAmount": 100.0,
+    "completedAt": "2024-01-01T13:15:00.000Z"
+  },
+  "timestamp": "2024-01-01T13:15:00.500Z",
+  "test": false
+}
+```
+
+---
+
+### withdrawal.failed
+
+Sent when withdrawal fails (funds returned to balance).
+
+**Payload:**
+
+```json
+{
+  "event": "withdrawal.failed",
+  "data": {
+    "withdrawalId": "cmh789ghi012jkl",
+    "amount": "100",
+    "currency": "USDT_BEP20",
+    "destinationAddress": "0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
+    "status": "FAILED",
+    "failureReason": "Insufficient network funds for gas",
+    "fundsReturned": true,
+    "createdAt": "2024-01-01T13:00:00.000Z"
+  },
+  "timestamp": "2024-01-01T13:10:00.000Z",
+  "test": false
+}
+```
+
+---
+
+## System Events
+
+### payment.test
+
+Test webhook event for verifying your endpoint.
+
+**Payload:**
+
+```json
+{
+  "event": "payment.test",
+  "data": {
+    "test": true,
+    "message": "This is a test webhook from InventPay",
+    "timestamp": "2024-01-01T14:00:00.000Z"
+  },
+  "timestamp": "2024-01-01T14:00:00.500Z",
+  "test": true
+}
+```
+
+---
+
+## Common Fields
+
+All webhook events include these common fields:
+
+| Field       | Type    | Description                              |
+| ----------- | ------- | ---------------------------------------- |
+| `event`     | string  | Event type (e.g., "payment.confirmed")   |
+| `data`      | object  | Event-specific data                      |
+| `timestamp` | string  | When webhook was sent (ISO 8601)         |
+| `test`      | boolean | True if test event, false for production |
+
+## Event Headers
+
+All webhook requests include these headers:
+
+| Header                | Description             | Example                |
+| --------------------- | ----------------------- | ---------------------- |
+| `X-Webhook-Signature` | HMAC-SHA256 signature   | `a1b2c3d4e5f6...`      |
+| `X-Webhook-Event`     | Event type              | `payment.confirmed`    |
+| `X-Webhook-ID`        | Unique delivery ID      | `wh_123abc456def`      |
+| `X-Webhook-Timestamp` | Delivery timestamp      | `2024-01-01T12:00:00Z` |
+| `Content-Type`        | Always application/json | `application/json`     |
+
+## Event Handling Examples
+
+### Basic Event Router
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+async function handleWebhookEvent(event) {
+  const { event: eventType, data } = event;
+
+  switch (eventType) {
+    case "payment.created":
+      await sendPaymentLinkToCustomer(data);
+      break;
+
+    case "payment.confirmed":
+      await fulfillOrder(data);
+      await sendConfirmationEmail(data);
+      break;
+
+    case "payment.underpaid":
+      await notifyCustomerOfShortfall(data);
+      break;
+
+    case "payment.expired":
+      await cancelOrder(data);
+      break;
+
+    case "payment.failed":
+      await logError(data);
+      break;
+
+    case "withdrawal.completed":
+      await updateAccountingSystem(data);
+      break;
+
+    default:
+      console.log("Unhandled event:", eventType);
+  }
+}
+```
+
+```python Python
+async def handle_webhook_event(event):
+    event_type = event.get('event')
+    data = event.get('data')
+
+    if event_type == 'payment.created':
+        await send_payment_link_to_customer(data)
+
+    elif event_type == 'payment.confirmed':
+        await fulfill_order(data)
+        await send_confirmation_email(data)
+
+    elif event_type == 'payment.underpaid':
+        await notify_customer_of_shortfall(data)
+
+    elif event_type == 'payment.expired':
+        await cancel_order(data)
+
+    elif event_type == 'payment.failed':
+        await log_error(data)
+
+    elif event_type == 'withdrawal.completed':
+        await update_accounting_system(data)
+
+    else:
+        print(f'Unhandled event: {event_type}')
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Handle All Relevant Events" icon="list-check">
+    Implement handlers for all events relevant to your business logic
+  </Accordion>
+
+  <Accordion title="Use payment.confirmed for Fulfillment" icon="box-check">
+    Only fulfill orders after receiving `payment.confirmed` event
+  </Accordion>
+
+  <Accordion title="Log All Events" icon="file-lines">
+    Keep audit trail of all webhook deliveries
+  </Accordion>
+
+  <Accordion title="Handle Failures Gracefully" icon="triangle-exclamation">
+    Have contingency plans for failed payments
+  </Accordion>
+
+  <Accordion title="Test All Event Types" icon="flask">
+    Ensure your code handles all event types correctly
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Setup Guide" icon="wrench" href="/webhooks/setup">
+    Configure webhooks in your application
+  </Card>
+  <Card title="Security" icon="shield-halved" href="/webhooks/security">
+    Learn webhook security best practices
+  </Card>
+  <Card title="Code Examples" icon="code" href="/sdks/javascript/examples">
+    See complete webhook implementations
+  </Card>
+  <Card title="Overview" icon="book" href="/webhooks/overview">
+    Back to webhooks overview
+  </Card>
+</CardGroup>

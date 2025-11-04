@@ -1,0 +1,669 @@
+---
+title: "Webhook Setup"
+description: "Step-by-step guide to configuring webhooks in InventPay"
+---
+
+## Overview
+
+Setting up webhooks allows your application to receive real-time notifications about payment events. This guide will walk you through the complete setup process.
+
+## Prerequisites
+
+Before setting up webhooks, ensure you have:
+
+<Steps>
+  <Step title="HTTPS Endpoint">
+    A publicly accessible HTTPS endpoint (webhooks cannot be sent to HTTP
+    endpoints)
+  </Step>
+  <Step title="Server Capability">
+    Ability to receive and process POST requests
+  </Step>
+  <Step title="API Key">Your InventPay API key from the dashboard</Step>
+</Steps>
+
+<Warning>
+  Webhook endpoints must use HTTPS. HTTP endpoints will be rejected for security
+  reasons.
+</Warning>
+
+## Configuration Methods
+
+You can configure webhooks in two ways:
+
+<CardGroup cols={2}>
+  <Card title="Dashboard" icon="browser">
+    Visual interface for easy setup **Best for:** Non-technical users, testing
+  </Card>
+  <Card title="API" icon="code">
+    Programmatic configuration **Best for:** Automated deployments, CI/CD
+  </Card>
+</CardGroup>
+
+## Setup via Dashboard
+
+### Step 1: Access Webhook Settings
+
+1. Log in to [InventPay Dashboard](https://inventpay.io/dashboard)
+2. Navigate to **Settings** → **Webhooks**
+3. Click **Configure Webhook**
+
+### Step 2: Enter Webhook URL
+
+Enter your webhook endpoint URL:
+
+```
+https://yourapp.com/api/webhooks/inventpay
+```
+
+<Tip>
+  Use a dedicated webhook endpoint path for easier monitoring and debugging.
+</Tip>
+
+### Step 3: Save Configuration
+
+1. Click **Save Webhook URL**
+2. Copy your **Webhook Secret** (shown once)
+3. Store the secret securely in your environment variables
+
+<Warning>
+  The webhook secret is shown only once. Store it immediately in a secure
+  location.
+</Warning>
+
+### Step 4: Test Your Webhook
+
+Click **Send Test Webhook** to verify your endpoint is working correctly.
+
+## Setup via API
+
+### Configure Webhook Endpoint
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+const sdk = new PaymentSDK({
+  apiKey: process.env.INVENTPAY_API_KEY,
+});
+
+// Configure webhook URL
+await sdk.configureWebhook({
+  webhookUrl: "https://yourapp.com/api/webhooks/inventpay",
+});
+
+console.log("Webhook configured successfully");
+```
+
+```python Python
+from inventpay import PaymentSDK, SDKConfig, WebhookConfig
+import os
+
+sdk = PaymentSDK(SDKConfig(api_key=os.getenv('INVENTPAY_API_KEY')))
+
+# Configure webhook URL
+sdk.configure_webhook(
+    WebhookConfig(webhook_url="https://yourapp.com/api/webhooks/inventpay")
+)
+
+print("Webhook configured successfully")
+```
+
+```bash cURL
+curl -X POST https://api.inventpay.io/v1/webhook/configure \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "webhookUrl": "https://yourapp.com/api/webhooks/inventpay"
+  }'
+```
+
+</CodeGroup>
+
+### Get Current Configuration
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+const config = await sdk.getWebhookConfig();
+console.log("Webhook URL:", config.data.webhookUrl);
+console.log("Active:", config.data.active);
+```
+
+```python Python
+config = sdk.get_webhook_config()
+print(f"Webhook URL: {config.data['webhookUrl']}")
+print(f"Active: {config.data['active']}")
+```
+
+```bash cURL
+curl -X GET https://api.inventpay.io/v1/webhook/config \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+### Test Webhook Delivery
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+const result = await sdk.testWebhook();
+console.log(result.message); // "Webhook test successful"
+```
+
+```python Python
+result = sdk.test_webhook()
+print(result['message'])  # "Webhook test successful"
+```
+
+```bash cURL
+curl -X POST https://api.inventpay.io/v1/webhook/test \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+## Implementing Your Webhook Endpoint
+
+### Basic Webhook Handler
+
+Here's a complete webhook endpoint implementation:
+
+<CodeGroup>
+
+```javascript Express.js
+const express = require("express");
+const crypto = require("crypto");
+
+const app = express();
+app.use(express.json());
+
+const WEBHOOK_SECRET = process.env.INVENTPAY_WEBHOOK_SECRET;
+
+// Verify webhook signature
+function verifyWebhookSignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(JSON.stringify(payload))
+    .digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+
+app.post("/api/webhooks/inventpay", async (req, res) => {
+  try {
+    const signature = req.headers["x-webhook-signature"];
+    const event = req.body;
+
+    // Verify signature
+    if (!verifyWebhookSignature(event, signature, WEBHOOK_SECRET)) {
+      return res.status(401).json({ error: "Invalid signature" });
+    }
+
+    // Process event
+    await handleWebhookEvent(event);
+
+    // Return 200 OK
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error("Webhook error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+async function handleWebhookEvent(event) {
+  switch (event.event) {
+    case "payment.confirmed":
+      await handlePaymentConfirmed(event.data);
+      break;
+    case "payment.expired":
+      await handlePaymentExpired(event.data);
+      break;
+    // ... handle other events
+  }
+}
+
+app.listen(3000, () => {
+  console.log("Webhook server running on port 3000");
+});
+```
+
+```python Flask
+from flask import Flask, request, jsonify
+import hmac
+import hashlib
+import os
+
+app = Flask(__name__)
+WEBHOOK_SECRET = os.getenv('INVENTPAY_WEBHOOK_SECRET')
+
+def verify_webhook_signature(payload, signature, secret):
+    """Verify webhook signature"""
+    expected_signature = hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(signature, expected_signature)
+
+@app.route('/api/webhooks/inventpay', methods=['POST'])
+def handle_webhook():
+    try:
+        signature = request.headers.get('X-Webhook-Signature')
+        payload = request.get_data(as_text=True)
+        event = request.get_json()
+
+        # Verify signature
+        if not verify_webhook_signature(payload, signature, WEBHOOK_SECRET):
+            return jsonify({'error': 'Invalid signature'}), 401
+
+        # Process event
+        handle_webhook_event(event)
+
+        # Return 200 OK
+        return jsonify({'received': True}), 200
+
+    except Exception as e:
+        print(f'Webhook error: {e}')
+        return jsonify({'error': 'Internal server error'}), 500
+
+def handle_webhook_event(event):
+    event_type = event.get('event')
+    data = event.get('data', {})
+
+    if event_type == 'payment.confirmed':
+        handle_payment_confirmed(data)
+    elif event_type == 'payment.expired':
+        handle_payment_expired(data)
+    # ... handle other events
+
+if __name__ == '__main__':
+    app.run(port=3000)
+```
+
+```python Django
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import hmac
+import hashlib
+import json
+import os
+
+WEBHOOK_SECRET = os.getenv('INVENTPAY_WEBHOOK_SECRET')
+
+def verify_webhook_signature(payload, signature, secret):
+    """Verify webhook signature"""
+    expected_signature = hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(signature, expected_signature)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def inventpay_webhook(request):
+    try:
+        signature = request.headers.get('X-Webhook-Signature')
+        payload = request.body.decode('utf-8')
+        event = json.loads(payload)
+
+        # Verify signature
+        if not verify_webhook_signature(payload, signature, WEBHOOK_SECRET):
+            return JsonResponse({'error': 'Invalid signature'}, status=401)
+
+        # Process event
+        handle_webhook_event(event)
+
+        # Return 200 OK
+        return JsonResponse({'received': True}, status=200)
+
+    except Exception as e:
+        print(f'Webhook error: {e}')
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
+def handle_webhook_event(event):
+    event_type = event.get('event')
+    data = event.get('data', {})
+
+    if event_type == 'payment.confirmed':
+        handle_payment_confirmed(data)
+    elif event_type == 'payment.expired':
+        handle_payment_expired(data)
+    # ... handle other events
+```
+
+</CodeGroup>
+
+### Key Implementation Points
+
+<AccordionGroup>
+  <Accordion title="1. Verify Signature First" icon="shield-check">
+    Always verify the webhook signature before processing to ensure the request is from InventPay.
+    
+    ```javascript
+    if (!verifySignature(payload, signature, secret)) {
+      return res.status(401).send('Invalid signature');
+    }
+    ```
+  </Accordion>
+
+{" "}
+<Accordion title="2. Return 200 Immediately" icon="gauge-high">
+  Respond with 200 status within 5 seconds to acknowledge receipt. ```javascript
+  // Return 200 immediately res.status(200).send('OK'); // Process
+  asynchronously processWebhook(event).catch(console.error); ```
+</Accordion>
+
+  <Accordion title="3. Handle Idempotency" icon="fingerprint">
+    Use webhook ID or payment ID to prevent duplicate processing.
+    
+    ```javascript
+    const webhookId = req.headers['x-webhook-id'];
+    if (await isProcessed(webhookId)) {
+      return res.status(200).send('Already processed');
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="4. Log Everything" icon="file-lines">
+    Log all webhook deliveries for debugging and auditing.
+    
+    ```javascript
+    logger.info('Webhook received', {
+      event: event.event,
+      paymentId: event.data.paymentId,
+      webhookId: webhookId
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Your Webhook
+
+### Local Testing with ngrok
+
+For local development, use ngrok to expose your local server:
+
+<Steps>
+  <Step title="Install ngrok">
+    Download from [ngrok.com](https://ngrok.com)
+  </Step>
+  <Step title="Start Your Server">
+    Run your webhook server locally (node server.js or python app.py)
+  </Step>
+  <Step title="Expose with ngrok">Run: ngrok http 3000</Step>
+  <Step title="Use ngrok URL">
+    Copy the HTTPS URL (e.g., https://abc123.ngrok.io) and set it as your
+    webhook URL
+  </Step>
+  <Step title="Test">Send a test webhook from dashboard or API</Step>
+</Steps>
+
+**Starting your server:**
+
+```bash
+node server.js
+# or
+python app.py
+```
+
+**Exposing with ngrok:**
+
+```bash
+ngrok http 3000
+```
+
+<Warning>
+  Never use ngrok URLs in production. They're temporary and will expire.
+</Warning>
+
+### Testing Checklist
+
+Before going live, verify:
+
+<AccordionGroup>
+  <Accordion title="✓ Signature Verification Works" icon="check">
+    Test with both valid and invalid signatures
+  </Accordion>
+
+{" "}
+<Accordion title="✓ All Event Types Handled" icon="check">
+  Ensure you handle all relevant event types
+</Accordion>
+
+{" "}
+<Accordion title="✓ Idempotency Implemented" icon="check">
+  Send duplicate webhooks to verify idempotency
+</Accordion>
+
+{" "}
+<Accordion title="✓ Error Handling Works" icon="check">
+  Test error scenarios and recovery
+</Accordion>
+
+{" "}
+<Accordion title="✓ Response Time < 5 seconds" icon="check">
+  Ensure endpoint responds quickly
+</Accordion>
+
+  <Accordion title="✓ HTTPS Certificate Valid" icon="check">
+    Verify SSL certificate is valid and trusted
+  </Accordion>
+</AccordionGroup>
+
+## Webhook Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use HTTPS Only" icon="lock">
+    Never accept webhooks over HTTP
+  </Card>
+  <Card title="Verify Signatures" icon="signature">
+    Always verify HMAC signature
+  </Card>
+  <Card title="Validate IP Addresses" icon="network-wired">
+    Optional: Whitelist InventPay IPs
+  </Card>
+  <Card title="Rate Limiting" icon="gauge-high">
+    Implement rate limiting on webhook endpoint
+  </Card>
+  <Card title="Monitor Failures" icon="chart-line">
+    Set up alerts for failed webhooks
+  </Card>
+  <Card title="Rotate Secrets" icon="key">
+    Periodically rotate webhook secrets
+  </Card>
+</CardGroup>
+
+<Card title="Security Guide" icon="shield-halved" href="/webhooks/security">
+  Learn more about webhook security
+</Card>
+
+## Monitoring Webhooks
+
+### Dashboard Monitoring
+
+View webhook activity in your dashboard:
+
+1. Go to **Webhooks** → **Deliveries**
+2. See recent deliveries and their status
+3. View response codes and retry attempts
+4. Inspect failed deliveries
+
+### API Monitoring
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+// Get recent deliveries
+const deliveries = await sdk.getWebhookDeliveries({
+  page: 1,
+  limit: 10,
+  success: true, // or false for failures only
+});
+
+// Get webhook statistics
+const stats = await sdk.getWebhookStats(7); // Last 7 days
+console.log("Success Rate:", stats.data.summary.successRate);
+console.log("Total Sent:", stats.data.summary.totalSent);
+console.log("Total Failed:", stats.data.summary.totalFailed);
+```
+
+```python Python
+# Get recent deliveries
+deliveries = sdk.get_webhook_deliveries(
+    page=1,
+    limit=10,
+    success=True
+)
+
+# Get webhook statistics
+stats = sdk.get_webhook_stats(days=7)
+print(f"Success Rate: {stats.data['summary']['successRate']}")
+print(f"Total Sent: {stats.data['summary']['totalSent']}")
+print(f"Total Failed: {stats.data['summary']['totalFailed']}")
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Webhooks Not Being Received" icon="circle-question">
+    **Possible Causes:**
+    - Webhook URL not configured
+    - Firewall blocking requests
+    - Server not responding
+    
+    **Solutions:**
+    1. Verify webhook URL in dashboard
+    2. Check firewall and security group rules
+    3. Test endpoint with test webhook
+    4. Check server logs for errors
+  </Accordion>
+
+{" "}
+<Accordion title="Signature Verification Failing" icon="circle-question">
+  **Possible Causes:** - Using wrong webhook secret - Body modified by
+  middleware - Incorrect signature calculation **Solutions:** 1. Verify webhook
+  secret from dashboard 2. Use raw request body for verification 3. Check HMAC
+  algorithm (SHA-256) 4. Log both signatures for comparison
+</Accordion>
+
+{" "}
+<Accordion title="Webhooks Timing Out" icon="circle-question">
+  **Possible Causes:** - Synchronous processing taking too long - Database
+  queries blocking response **Solutions:** 1. Return 200 immediately 2. Process
+  webhooks asynchronously 3. Use background jobs for heavy processing 4.
+  Optimize database queries
+</Accordion>
+
+  <Accordion title="Receiving Duplicate Webhooks" icon="circle-question">
+    **This is Normal:** Retries may cause duplicates
+    
+    **Solution:**
+    Implement idempotency using webhook ID or payment ID
+    
+    ```javascript
+    const webhookId = req.headers['x-webhook-id'];
+    if (await db.isProcessed(webhookId)) {
+      return res.status(200).send('Already processed');
+    }
+    await db.markProcessed(webhookId);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Configuration
+
+### Custom Headers
+
+Add custom headers to webhook requests (Enterprise feature):
+
+```javascript
+await sdk.configureWebhook({
+  webhookUrl: "https://yourapp.com/api/webhooks/inventpay",
+  customHeaders: {
+    "X-Custom-Header": "custom-value",
+    "X-Environment": "production",
+  },
+});
+```
+
+### Event Filtering
+
+Subscribe to specific events only (Enterprise feature):
+
+```javascript
+await sdk.configureWebhook({
+  webhookUrl: "https://yourapp.com/api/webhooks/inventpay",
+  events: ["payment.confirmed", "payment.expired", "withdrawal.completed"],
+});
+```
+
+### Multiple Webhook URLs
+
+Configure different URLs for different event types (Enterprise feature):
+
+```javascript
+await sdk.configureMultipleWebhooks([
+  {
+    url: "https://yourapp.com/webhooks/payments",
+    events: ["payment.confirmed", "payment.expired"],
+  },
+  {
+    url: "https://yourapp.com/webhooks/withdrawals",
+    events: ["withdrawal.completed", "withdrawal.failed"],
+  },
+]);
+```
+
+<Card
+  title="Enterprise Features"
+  icon="building"
+  href="mailto:sales@inventpay.io"
+>
+  Contact sales for advanced webhook features
+</Card>
+
+## Webhook IP Addresses
+
+For additional security, you can whitelist InventPay webhook IPs:
+
+```
+52.89.214.238
+34.212.75.30
+54.218.53.128
+```
+
+<Info>
+  IP addresses are subject to change. We recommend signature verification over
+  IP whitelisting.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Event Reference" icon="list" href="/webhooks/events">
+    View all webhook events and payloads
+  </Card>
+  <Card title="Security Guide" icon="shield-halved" href="/webhooks/security">
+    Learn webhook security best practices
+  </Card>
+  <Card title="Code Examples" icon="code" href="/sdks/javascript/examples">
+    See complete webhook implementations
+  </Card>
+  <Card
+    title="Dashboard"
+    icon="gauge"
+    href="https://inventpay.io/dashboard/webhooks"
+  >
+    Configure webhooks in dashboard
+  </Card>
+</CardGroup>

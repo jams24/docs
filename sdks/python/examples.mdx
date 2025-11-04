@@ -1,0 +1,707 @@
+---
+title: "Python SDK Examples"
+description: "Real-world examples and code snippets for the InventPay Python SDK"
+---
+
+## E-Commerce Integration
+
+### Complete Payment Flow (Flask)
+
+```python
+import os
+from flask import Flask, request, jsonify, redirect
+from dotenv import load_dotenv
+from inventpay import InventPayClient
+
+load_dotenv()
+
+app = Flask(__name__)
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+# Store for orders (use a real database in production)
+orders = {}
+
+@app.route('/orders', methods=['POST'])
+def create_order():
+    data = request.json
+    items = data['items']
+    customer_email = data['customer_email']
+
+    # Calculate total
+    total = sum(item['price'] * item['quantity'] for item in items)
+
+    try:
+        # Create payment
+        payment = client.payments.create(
+            amount=str(total),
+            currency='BTC',
+            description=f"Order for {customer_email}",
+            callback_url=f"{request.host_url}webhooks/inventpay",
+            metadata={
+                'order_type': 'ecommerce',
+                'customer_email': customer_email,
+                'items': items,
+            },
+        )
+
+        # Store order
+        orders[payment.id] = {
+            'id': payment.id,
+            'items': items,
+            'customer_email': customer_email,
+            'total': total,
+            'status': 'pending',
+            'payment_id': payment.id,
+        }
+
+        return jsonify({
+            'order_id': payment.id,
+            'payment_address': payment.payment_address,
+            'amount': payment.amount,
+            'currency': payment.currency,
+            'expires_at': payment.expires_at,
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/orders/<order_id>', methods=['GET'])
+def get_order(order_id):
+    order = orders.get(order_id)
+
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+
+    try:
+        # Get latest payment status
+        payment = client.payments.get(order['payment_id'])
+
+        return jsonify({
+            'order': order,
+            'payment': {
+                'status': payment.status,
+                'is_paid': payment.is_paid,
+                'is_confirmed': payment.is_confirmed,
+                'amount_received': payment.amount_received,
+            },
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/webhooks/inventpay', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('X-InventPay-Signature')
+    payload = request.get_data(as_text=True)
+
+    try:
+        event = client.webhooks.verify(payload, signature)
+
+        if event.type == 'payment.confirmed':
+            order = orders.get(event.data.id)
+
+            if order:
+                order['status'] = 'confirmed'
+                # Send confirmation email
+                send_order_confirmation(order)
+                # Fulfill order
+                fulfill_order(order)
+
+        return 'OK', 200
+
+    except Exception as e:
+        print(f"Webhook verification failed: {e}")
+        return 'Invalid signature', 400
+
+def send_order_confirmation(order):
+    print(f"Sending confirmation email to {order['customer_email']}")
+    # Implement email sending
+
+def fulfill_order(order):
+    print(f"Fulfilling order {order['id']}")
+    # Implement order fulfillment
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+## SaaS Subscription (Django)
+
+### Monthly Subscription with Invoice
+
+```python
+# models.py
+from django.db import models
+
+class Subscription(models.Model):
+    PLAN_CHOICES = [
+        ('basic', 'Basic'),
+        ('pro', 'Pro'),
+        ('enterprise', 'Enterprise'),
+    ]
+
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive')
+    current_period_end = models.DateTimeField()
+    invoice_id = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.plan}"
+
+# views.py
+from django.shortcuts import redirect
+from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse
+from .models import Subscription
+from .services import inventpay
+from datetime import datetime, timedelta
+
+@require_http_methods(["POST"])
+def create_subscription(request):
+    user = request.user
+    plan = request.POST.get('plan')
+
+    prices = {
+        'basic': '9.99',
+        'pro': '29.99',
+        'enterprise': '99.99',
+    }
+
+    try:
+        invoice = inventpay.invoices.create(
+            amount=prices[plan],
+            currency='USD',
+            description=f'{plan.title()} Plan - Monthly',
+            callback_url=request.build_absolute_uri('/webhooks/inventpay/'),
+            metadata={
+                'type': 'subscription',
+                'user_id': str(user.id),
+                'plan': plan,
+                'billing_period': 'monthly',
+            },
+        )
+
+        # Create subscription record
+        subscription = Subscription.objects.create(
+            user=user,
+            plan=plan,
+            status='inactive',
+            current_period_end=datetime.now() + timedelta(days=30),
+            invoice_id=invoice.id,
+        )
+
+        return redirect(invoice.hosted_url)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# webhooks.py
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from .services import inventpay
+from .models import Subscription
+
+@csrf_exempt
+def handle_subscription_webhook(request):
+    signature = request.headers.get('X-InventPay-Signature')
+    payload = request.body.decode('utf-8')
+
+    try:
+        event = inventpay.webhooks.verify(payload, signature)
+
+        if event.type == 'invoice.paid':
+            metadata = event.data.metadata
+            user_id = metadata['user_id']
+            plan = metadata['plan']
+
+            # Activate subscription
+            subscription = Subscription.objects.get(
+                user_id=user_id,
+                invoice_id=event.data.id,
+            )
+            subscription.status = 'active'
+            subscription.current_period_end = datetime.now() + timedelta(days=30)
+            subscription.save()
+
+            # Grant plan access
+            grant_plan_access(user_id, plan)
+
+        return HttpResponse('OK', status=200)
+
+    except Exception as e:
+        return HttpResponse('Invalid signature', status=400)
+
+def grant_plan_access(user_id, plan):
+    print(f"Granting {plan} access to user {user_id}")
+    # Implement access control logic
+```
+
+## Marketplace Payout System
+
+### Seller Withdrawals
+
+```python
+import os
+from inventpay import InventPayClient
+from decimal import Decimal
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+class SellerWallet:
+    def __init__(self, seller_id, balance, withdrawal_address, currency):
+        self.seller_id = seller_id
+        self.balance = Decimal(str(balance))
+        self.withdrawal_address = withdrawal_address
+        self.currency = currency
+        self.pending_withdrawals = []
+
+    def request_withdrawal(self, amount: str):
+        amount_decimal = Decimal(amount)
+
+        if amount_decimal > self.balance:
+            raise ValueError("Insufficient balance")
+
+        try:
+            # Check platform balance
+            platform_balance = client.balances.get_by_currency(self.currency)
+
+            if Decimal(platform_balance.available) < amount_decimal:
+                raise ValueError("Insufficient platform balance")
+
+            # Create withdrawal
+            withdrawal = client.withdrawals.create(
+                amount=amount,
+                currency=self.currency,
+                address=self.withdrawal_address,
+                network='bitcoin',  # or 'ethereum', etc.
+            )
+
+            # Deduct from seller balance
+            self.balance -= amount_decimal
+            self.pending_withdrawals.append(withdrawal.id)
+
+            return {
+                'withdrawal_id': withdrawal.id,
+                'status': withdrawal.status,
+                'fee': withdrawal.fee,
+                'estimated_arrival': withdrawal.estimated_arrival,
+            }
+
+        except Exception as e:
+            print(f"Withdrawal failed: {e}")
+            raise
+
+    def check_withdrawal_status(self, withdrawal_id):
+        withdrawal = client.withdrawals.get(withdrawal_id)
+
+        return {
+            'id': withdrawal.id,
+            'status': withdrawal.status,
+            'transaction_hash': withdrawal.transaction_hash,
+            'amount': withdrawal.amount,
+            'fee': withdrawal.fee,
+        }
+
+# Example usage
+seller_wallet = SellerWallet(
+    seller_id='seller_123',
+    balance=1000.0,
+    withdrawal_address='bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+    currency='BTC',
+)
+
+try:
+    result = seller_wallet.request_withdrawal('0.5')
+    print(f"Withdrawal requested: {result['withdrawal_id']}")
+
+    # Check status
+    status = seller_wallet.check_withdrawal_status(result['withdrawal_id'])
+    print(f"Status: {status['status']}")
+
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+## Gaming Platform (FastAPI)
+
+### In-Game Purchases with Async
+
+```python
+from fastapi import FastAPI, HTTPException, Header, Request
+from pydantic import BaseModel
+from inventpay import AsyncInventPayClient
+import os
+
+app = FastAPI()
+client = AsyncInventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+class GamePurchase(BaseModel):
+    player_id: str
+    item_id: str
+    item_name: str
+    price: float
+    currency: str
+
+class GameItem:
+    def __init__(self, item_id: str, name: str, price: float):
+        self.item_id = item_id
+        self.name = name
+        self.price = price
+
+# Game items catalog
+GAME_ITEMS = {
+    'sword_1': GameItem('sword_1', 'Legendary Sword', 99.99),
+    'armor_1': GameItem('armor_1', 'Dragon Armor', 149.99),
+    'potion_1': GameItem('potion_1', 'Health Potion Pack', 9.99),
+}
+
+@app.post('/game/purchase')
+async def create_game_purchase(purchase: GamePurchase):
+    item = GAME_ITEMS.get(purchase.item_id)
+
+    if not item:
+        raise HTTPException(status_code=404, detail='Item not found')
+
+    try:
+        payment = await client.payments.create(
+            amount=str(item.price),
+            currency=purchase.currency,
+            description=f"{item.name} for player {purchase.player_id}",
+            callback_url=f"{os.getenv('APP_URL')}/webhooks/game",
+            metadata={
+                'type': 'game_purchase',
+                'player_id': purchase.player_id,
+                'item_id': item.item_id,
+                'item_name': item.name,
+            },
+        )
+
+        return {
+            'payment_id': payment.id,
+            'payment_address': payment.payment_address,
+            'amount': payment.amount,
+            'currency': payment.currency,
+            'qr_code': payment.qr_code_url,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/webhooks/game')
+async def handle_game_webhook(
+    request: Request,
+    x_inventpay_signature: str = Header(...),
+):
+    body = await request.body()
+    payload = body.decode('utf-8')
+
+    try:
+        event = await client.webhooks.verify_async(payload, x_inventpay_signature)
+
+        if event.type == 'payment.confirmed':
+            metadata = event.data.metadata
+            player_id = metadata['player_id']
+            item_id = metadata['item_id']
+            item_name = metadata['item_name']
+
+            # Grant item to player
+            await grant_game_item(player_id, item_id)
+
+            # Log purchase
+            print(f"Player {player_id} purchased {item_name}")
+
+            # Send in-game notification
+            await send_in_game_notification(player_id, f"You received: {item_name}!")
+
+        return {'status': 'ok'}
+
+    except Exception:
+        raise HTTPException(status_code=400, detail='Invalid signature')
+
+async def grant_game_item(player_id: str, item_id: str):
+    print(f"Granting item {item_id} to player {player_id}")
+    # Implement item granting logic via game server API
+
+async def send_in_game_notification(player_id: str, message: str):
+    print(f"Sending notification to {player_id}: {message}")
+    # Implement real-time notification system
+```
+
+## Balance Dashboard
+
+### Real-Time Balance Monitoring
+
+```python
+import os
+import time
+from inventpay import InventPayClient
+from decimal import Decimal
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+def get_balance_summary():
+    """Get summary of all balances"""
+    balances = client.balances.get_all()
+
+    summary = {
+        'total_usd': Decimal('0'),
+        'by_currency': {},
+    }
+
+    for balance in balances:
+        summary['by_currency'][balance.currency] = {
+            'available': balance.available,
+            'pending': balance.pending,
+            'total': balance.total,
+        }
+
+        # In production, convert to USD using exchange rates
+        # summary['total_usd'] += convert_to_usd(balance.total, balance.currency)
+
+    return summary
+
+def monitor_balances(interval=60):
+    """Monitor balance changes"""
+    previous_balances = {}
+
+    while True:
+        balances = client.balances.get_all()
+
+        for balance in balances:
+            previous = previous_balances.get(balance.currency)
+
+            if previous and previous['total'] != balance.total:
+                print(f"\n{balance.currency} balance changed:")
+                print(f"  Previous: {previous['total']}")
+                print(f"  Current: {balance.total}")
+                change = Decimal(balance.total) - Decimal(previous['total'])
+                print(f"  Change: {change}")
+
+            previous_balances[balance.currency] = {
+                'available': balance.available,
+                'pending': balance.pending,
+                'total': balance.total,
+            }
+
+        time.sleep(interval)
+
+def get_transaction_report(currency='BTC', days=30):
+    """Generate transaction report"""
+    transactions = client.balances.get_transactions(currency, limit=1000)
+
+    report = {
+        'total_received': Decimal('0'),
+        'total_sent': Decimal('0'),
+        'transaction_count': len(transactions),
+        'transactions_by_type': {},
+    }
+
+    for tx in transactions:
+        amount = Decimal(tx.amount)
+
+        if tx.type == 'deposit':
+            report['total_received'] += amount
+        elif tx.type == 'withdrawal':
+            report['total_sent'] += amount
+
+        if tx.type not in report['transactions_by_type']:
+            report['transactions_by_type'][tx.type] = 0
+        report['transactions_by_type'][tx.type] += 1
+
+    return report
+
+# Example usage
+if __name__ == '__main__':
+    # Get balance summary
+    summary = get_balance_summary()
+    print("Balance Summary:", summary)
+
+    # Generate transaction report
+    report = get_transaction_report('BTC')
+    print("\nTransaction Report:", report)
+
+    # Start monitoring (uncomment to run)
+    # monitor_balances(60)  # Check every minute
+```
+
+## Testing Examples
+
+### Unit Tests with pytest
+
+```python
+# test_inventpay.py
+import pytest
+import os
+from inventpay import InventPayClient
+from inventpay import InventPayError, AuthenticationError
+
+@pytest.fixture
+def client():
+    return InventPayClient(
+        api_key=os.getenv('INVENTPAY_TEST_API_KEY'),
+        base_url='https://sandbox-api.inventpay.io',
+    )
+
+def test_create_payment(client):
+    payment = client.payments.create(
+        amount='100.00',
+        currency='BTC',
+        description='Test payment',
+    )
+
+    assert payment.id is not None
+    assert payment.amount == '100.00'
+    assert payment.currency == 'BTC'
+    assert payment.status == 'pending'
+
+def test_get_payment(client):
+    # Create payment first
+    payment = client.payments.create(
+        amount='50.00',
+        currency='ETH',
+    )
+
+    # Retrieve it
+    retrieved = client.payments.get(payment.id)
+
+    assert retrieved.id == payment.id
+    assert retrieved.amount == payment.amount
+
+def test_list_payments(client):
+    payments = client.payments.list(limit=10)
+
+    assert isinstance(payments, list)
+    assert len(payments) <= 10
+
+def test_invalid_api_key():
+    client = InventPayClient(api_key='invalid_key')
+
+    with pytest.raises(AuthenticationError):
+        client.payments.list()
+
+def test_get_balances(client):
+    balances = client.balances.get_all()
+
+    assert isinstance(balances, list)
+    for balance in balances:
+        assert balance.currency is not None
+        assert balance.available is not None
+
+# Run tests with:
+# pytest test_inventpay.py -v
+```
+
+## Async Examples
+
+### Async E-Commerce with asyncio
+
+```python
+import asyncio
+import os
+from inventpay import AsyncInventPayClient
+
+async def process_multiple_orders(orders):
+    async with AsyncInventPayClient(api_key=os.getenv('INVENTPAY_API_KEY')) as client:
+        # Process all orders in parallel
+        tasks = [create_payment(client, order) for order in orders]
+        payments = await asyncio.gather(*tasks)
+
+        return payments
+
+async def create_payment(client, order):
+    return await client.payments.create(
+        amount=str(order['total']),
+        currency='BTC',
+        description=f"Order #{order['id']}",
+        metadata={'order_id': order['id']},
+    )
+
+# Example usage
+orders = [
+    {'id': '001', 'total': 100.00},
+    {'id': '002', 'total': 250.00},
+    {'id': '003', 'total': 75.50},
+]
+
+payments = asyncio.run(process_multiple_orders(orders))
+for payment in payments:
+    print(f"Created payment {payment.id}")
+```
+
+## Error Handling Examples
+
+### Comprehensive Error Handler
+
+```python
+from inventpay import (
+    InventPayClient,
+    InventPayError,
+    AuthenticationError,
+    RateLimitError,
+    ValidationError,
+)
+import time
+
+client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
+
+def create_payment_with_retry(amount, currency, max_retries=3):
+    """Create payment with automatic retry on rate limit"""
+    for attempt in range(max_retries):
+        try:
+            return client.payments.create(amount=amount, currency=currency)
+
+        except AuthenticationError:
+            print("Authentication failed - check your API key")
+            raise
+
+        except RateLimitError as e:
+            if attempt < max_retries - 1:
+                wait_time = e.retry_after if hasattr(e, 'retry_after') else 60
+                print(f"Rate limited - waiting {wait_time}s before retry")
+                time.sleep(wait_time)
+            else:
+                raise
+
+        except ValidationError as e:
+            print(f"Validation failed: {e.errors}")
+            raise
+
+        except InventPayError as e:
+            print(f"API error: {e.message}")
+            raise
+
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            raise
+
+# Usage
+try:
+    payment = create_payment_with_retry('100.00', 'BTC')
+    print(f"Payment created: {payment.id}")
+except Exception as e:
+    print(f"Failed to create payment: {e}")
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Complete API documentation
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/webhooks/overview">
+    Learn about webhook events
+  </Card>
+  <Card title="Best Practices" icon="shield-check" href="/concepts/payments">
+    Security and optimization tips
+  </Card>
+  <Card title="Support" icon="life-ring" href="mailto:support@inventpay.io">
+    Get help from our team
+  </Card>
+</CardGroup>

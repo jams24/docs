@@ -1,0 +1,584 @@
+---
+title: "JavaScript SDK Usage"
+description: "Complete guide to using the InventPay JavaScript/TypeScript SDK"
+---
+
+## Client Initialization
+
+First, create an InventPay client instance:
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+```
+
+## Payments
+
+### Create a Payment
+
+Create a fixed-currency payment:
+
+```typescript
+const payment = await client.payments.create({
+  amount: "100.00",
+  currency: "BTC",
+  description: "Order #12345",
+  callbackUrl: "https://yoursite.com/webhooks/inventpay",
+  metadata: {
+    orderId: "12345",
+    customerId: "cust_abc123",
+  },
+});
+
+console.log("Payment Address:", payment.paymentAddress);
+console.log("Amount to pay:", payment.amount, payment.currency);
+```
+
+<Tip>
+  The `metadata` field can store any JSON-serializable data and will be returned
+  in webhooks.
+</Tip>
+
+### Get Payment Status
+
+```typescript
+const payment = await client.payments.get("pmt_1234567890");
+
+console.log("Status:", payment.status);
+console.log("Paid:", payment.isPaid);
+console.log("Confirmed:", payment.isConfirmed);
+
+// Check specific statuses
+if (payment.status === "pending") {
+  console.log("Waiting for payment...");
+} else if (payment.status === "confirmed") {
+  console.log("Payment confirmed!");
+}
+```
+
+### List Payments
+
+```typescript
+// List all payments
+const payments = await client.payments.list();
+
+// List with pagination
+const paymentsPage1 = await client.payments.list({
+  limit: 20,
+  page: 1,
+});
+
+// List with filters
+const recentPayments = await client.payments.list({
+  status: "confirmed",
+  currency: "BTC",
+  limit: 10,
+});
+```
+
+## Invoices
+
+### Create an Invoice
+
+Create a multi-currency invoice:
+
+```typescript
+const invoice = await client.invoices.create({
+  amount: "1000.00",
+  currency: "USD",
+  description: "Premium Subscription",
+  callbackUrl: "https://yoursite.com/webhooks/inventpay",
+  metadata: {
+    subscriptionId: "sub_xyz789",
+    plan: "premium",
+  },
+});
+
+console.log("Invoice URL:", invoice.hostedUrl);
+
+// Available payment options
+invoice.paymentOptions.forEach((option) => {
+  console.log(`Pay ${option.amount} ${option.currency}`);
+});
+```
+
+### Get Invoice Status
+
+```typescript
+const invoice = await client.invoices.get("inv_1234567890");
+
+console.log("Status:", invoice.status);
+console.log("Selected currency:", invoice.selectedCurrency);
+console.log("Amount paid:", invoice.amountPaid);
+```
+
+### List Invoices
+
+```typescript
+const invoices = await client.invoices.list({
+  status: "pending",
+  limit: 20,
+});
+```
+
+## Balances
+
+### Get All Balances
+
+```typescript
+const balances = await client.balances.getAll();
+
+balances.forEach((balance) => {
+  console.log(`${balance.currency}: ${balance.available}`);
+});
+```
+
+### Get Balance by Currency
+
+```typescript
+const btcBalance = await client.balances.getByCurrency("BTC");
+
+console.log("Available:", btcBalance.available);
+console.log("Pending:", btcBalance.pending);
+console.log("Total:", btcBalance.total);
+```
+
+### Get Transaction History
+
+```typescript
+const transactions = await client.balances.getTransactions("BTC", {
+  limit: 50,
+  page: 1,
+});
+
+transactions.forEach((tx) => {
+  console.log(`${tx.type}: ${tx.amount} ${tx.currency}`);
+});
+```
+
+## Withdrawals
+
+### Create a Withdrawal
+
+```typescript
+const withdrawal = await client.withdrawals.create({
+  amount: "0.5",
+  currency: "BTC",
+  address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+  network: "bitcoin",
+});
+
+console.log("Withdrawal ID:", withdrawal.id);
+console.log("Status:", withdrawal.status);
+console.log("Fee:", withdrawal.fee);
+```
+
+<Warning>
+  Always verify the withdrawal address before submitting. Cryptocurrency
+  transactions are irreversible.
+</Warning>
+
+### Get Withdrawal Status
+
+```typescript
+const withdrawal = await client.withdrawals.get("wth_1234567890");
+
+console.log("Status:", withdrawal.status);
+
+if (withdrawal.status === "completed") {
+  console.log("Transaction hash:", withdrawal.transactionHash);
+}
+```
+
+### List Withdrawals
+
+```typescript
+const withdrawals = await client.withdrawals.list({
+  currency: "BTC",
+  status: "completed",
+  limit: 20,
+});
+```
+
+## Webhook Handling
+
+### Verify Webhook Signature
+
+```typescript
+import express from "express";
+import { InventPayClient } from "@inventpay/sdk";
+
+const app = express();
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+app.post(
+  "/webhooks/inventpay",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const signature = req.headers["x-inventpay-signature"] as string;
+    const payload = req.body.toString();
+
+    try {
+      // Verify the webhook signature
+      const event = client.webhooks.verify(payload, signature);
+
+      // Handle the event
+      switch (event.type) {
+        case "payment.confirmed":
+          console.log("Payment confirmed:", event.data);
+          // Update your database, fulfill order, etc.
+          break;
+
+        case "payment.failed":
+          console.log("Payment failed:", event.data);
+          // Handle failed payment
+          break;
+
+        case "invoice.paid":
+          console.log("Invoice paid:", event.data);
+          // Activate subscription, etc.
+          break;
+
+        case "withdrawal.completed":
+          console.log("Withdrawal completed:", event.data);
+          // Update balance display, etc.
+          break;
+      }
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("Webhook verification failed:", error);
+      res.status(400).send("Invalid signature");
+    }
+  }
+);
+```
+
+### Type-Safe Event Handling
+
+```typescript
+import type { WebhookEvent } from "@inventpay/sdk";
+
+function handleWebhook(event: WebhookEvent) {
+  switch (event.type) {
+    case "payment.confirmed":
+      // TypeScript knows event.data is a Payment
+      console.log("Payment amount:", event.data.amount);
+      break;
+
+    case "invoice.paid":
+      // TypeScript knows event.data is an Invoice
+      console.log("Invoice currency:", event.data.selectedCurrency);
+      break;
+
+    case "withdrawal.completed":
+      // TypeScript knows event.data is a Withdrawal
+      console.log("Withdrawal hash:", event.data.transactionHash);
+      break;
+  }
+}
+```
+
+## Error Handling
+
+### Try-Catch Pattern
+
+```typescript
+import { InventPayError } from "@inventpay/sdk";
+
+try {
+  const payment = await client.payments.create({
+    amount: "100.00",
+    currency: "BTC",
+  });
+} catch (error) {
+  if (error instanceof InventPayError) {
+    // API error
+    console.error("API Error:", {
+      status: error.statusCode,
+      code: error.code,
+      message: error.message,
+    });
+
+    // Handle specific errors
+    if (error.statusCode === 401) {
+      console.error("Invalid API key");
+    } else if (error.statusCode === 429) {
+      console.error("Rate limit exceeded");
+    }
+  } else {
+    // Network or other error
+    console.error("Unexpected error:", error);
+  }
+}
+```
+
+### Error Types
+
+```typescript
+import {
+  InventPayError,
+  AuthenticationError,
+  RateLimitError,
+  ValidationError,
+} from '@inventpay/sdk';
+
+try {
+  const payment = await client.payments.create({ ... });
+} catch (error) {
+  if (error instanceof AuthenticationError) {
+    console.error('Authentication failed');
+  } else if (error instanceof RateLimitError) {
+    console.error('Rate limit exceeded, retry after:', error.retryAfter);
+  } else if (error instanceof ValidationError) {
+    console.error('Validation failed:', error.errors);
+  } else if (error instanceof InventPayError) {
+    console.error('API error:', error.message);
+  }
+}
+```
+
+## Advanced Usage
+
+### Pagination
+
+```typescript
+// Manual pagination
+let page = 1;
+let hasMore = true;
+
+while (hasMore) {
+  const payments = await client.payments.list({
+    limit: 100,
+    page,
+  });
+
+  // Process payments
+  payments.forEach((payment) => {
+    console.log(payment.id);
+  });
+
+  hasMore = payments.length === 100;
+  page++;
+}
+```
+
+### Parallel Requests
+
+```typescript
+// Fetch multiple resources in parallel
+const [balances, payments, withdrawals] = await Promise.all([
+  client.balances.getAll(),
+  client.payments.list({ limit: 10 }),
+  client.withdrawals.list({ limit: 10 }),
+]);
+```
+
+### Request Cancellation
+
+```typescript
+const controller = new AbortController();
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  const payment = await client.payments.create(
+    {
+      amount: "100",
+      currency: "BTC",
+    },
+    {
+      signal: controller.signal,
+    }
+  );
+} catch (error) {
+  if (error.name === "AbortError") {
+    console.log("Request cancelled");
+  }
+}
+```
+
+### Idempotency
+
+Prevent duplicate payments using idempotency keys:
+
+```typescript
+const payment = await client.payments.create(
+  {
+    amount: "100.00",
+    currency: "BTC",
+  },
+  {
+    idempotencyKey: "order-12345", // Unique key per operation
+  }
+);
+
+// Making the same request again will return the same payment
+const samePayment = await client.payments.create(
+  {
+    amount: "100.00",
+    currency: "BTC",
+  },
+  {
+    idempotencyKey: "order-12345",
+  }
+);
+
+console.log(payment.id === samePayment.id); // true
+```
+
+## TypeScript Features
+
+### Type Guards
+
+```typescript
+import type { Payment, Invoice } from "@inventpay/sdk";
+
+function processTransaction(transaction: Payment | Invoice) {
+  if ("paymentAddress" in transaction) {
+    // TypeScript knows this is a Payment
+    console.log("Payment address:", transaction.paymentAddress);
+  } else {
+    // TypeScript knows this is an Invoice
+    console.log("Hosted URL:", transaction.hostedUrl);
+  }
+}
+```
+
+### Generics
+
+```typescript
+async function fetchResource<T>(fetcher: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fetcher();
+  } catch (error) {
+    console.error("Failed to fetch:", error);
+    return null;
+  }
+}
+
+const payment = await fetchResource(() => client.payments.get("pmt_123"));
+```
+
+### Utility Types
+
+```typescript
+import type { Payment } from "@inventpay/sdk";
+
+// Extract only the fields you need
+type PaymentSummary = Pick<Payment, "id" | "amount" | "currency" | "status">;
+
+// Make all fields optional
+type PartialPayment = Partial<Payment>;
+
+// Make all fields required
+type RequiredPayment = Required<Payment>;
+```
+
+## Best Practices
+
+<Check>Always use environment variables for API keys</Check>
+<Check>Implement proper error handling for all API calls</Check>
+<Check>Use webhooks for payment notifications instead of polling</Check>
+<Check>Verify webhook signatures to ensure authenticity</Check>
+<Check>Store metadata with payments for easier tracking</Check>
+<Check>Use idempotency keys for critical operations</Check>
+<Check>Implement retry logic for network failures</Check>
+<Check>Log errors and monitor API responses</Check>
+<Check>Test with sandbox environment before production</Check>
+<Check>Keep the SDK updated to the latest version</Check>
+
+## Common Patterns
+
+### Payment Flow with Webhook
+
+```typescript
+// 1. Create payment
+const payment = await client.payments.create({
+  amount: "100.00",
+  currency: "BTC",
+  description: "Order #12345",
+  callbackUrl: "https://yoursite.com/webhooks/inventpay",
+  metadata: { orderId: "12345" },
+});
+
+// 2. Show payment address to user
+console.log(
+  "Please send",
+  payment.amount,
+  payment.currency,
+  "to",
+  payment.paymentAddress
+);
+
+// 3. Wait for webhook (in separate handler)
+app.post("/webhooks/inventpay", async (req, res) => {
+  const event = client.webhooks.verify(
+    req.body,
+    req.headers["x-inventpay-signature"]
+  );
+
+  if (event.type === "payment.confirmed" && event.data.id === payment.id) {
+    // Payment confirmed! Fulfill order
+    await fulfillOrder(event.data.metadata.orderId);
+  }
+
+  res.status(200).send("OK");
+});
+```
+
+### Subscription Payment
+
+```typescript
+// Create invoice for subscription
+const invoice = await client.invoices.create({
+  amount: "29.99",
+  currency: "USD",
+  description: "Monthly Subscription",
+  metadata: {
+    userId: "user_123",
+    plan: "premium",
+  },
+});
+
+// Redirect user to invoice page
+res.redirect(invoice.hostedUrl);
+
+// Handle webhook when paid
+app.post("/webhooks/inventpay", async (req, res) => {
+  const event = client.webhooks.verify(
+    req.body,
+    req.headers["x-inventpay-signature"]
+  );
+
+  if (event.type === "invoice.paid") {
+    const { userId, plan } = event.data.metadata;
+    await activateSubscription(userId, plan);
+  }
+
+  res.status(200).send("OK");
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Examples" icon="code" href="/sdks/javascript/examples">
+    See complete, runnable examples
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Detailed API documentation
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/webhooks/overview">
+    Learn about webhook events
+  </Card>
+  <Card title="Best Practices" icon="shield-check" href="/concepts/payments">
+    Security and optimization tips
+  </Card>
+</CardGroup>

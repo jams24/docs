@@ -1,0 +1,191 @@
+---
+title: "Get Payment Status"
+description: "Check the current status of a payment or invoice"
+api: "GET /v1/invoice/{paymentId}/status"
+---
+
+## Overview
+
+This endpoint retrieves the current status of a payment or invoice, including confirmation count, current balance, and payment state. This is a public endpoint that does not require authentication.
+
+Use this endpoint to check if a payment has been received and confirmed.
+
+## Path Parameters
+
+<ParamField path="paymentId" type="string" required>
+  The unique payment or invoice ID **Example:** `"cmh123abc456def"`
+</ParamField>
+
+## Response
+
+<ResponseField name="paymentId" type="string">
+  The payment identifier **Example:** `"cmh123abc456def"`
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current payment status **Options:** `PENDING`, `COMPLETED`, `EXPIRED`,
+  `FAILED` **Example:** `"PENDING"`
+</ResponseField>
+
+<ResponseField name="currentBalance" type="string">
+  Amount received so far in cryptocurrency **Example:** `"29.99"`
+</ResponseField>
+
+<ResponseField name="confirmations" type="number">
+  Number of blockchain confirmations received **Example:** `3`
+</ResponseField>
+
+<ResponseField name="requiredAmount" type="string">
+  Total amount required for this payment **Example:** `"29.99"`
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  The cryptocurrency for this payment **Example:** `"USDT_BEP20"`
+</ResponseField>
+
+<ResponseField name="address" type="string">
+  Payment address (if currency has been selected) **Example:**
+  `"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"`
+</ResponseField>
+
+<ResponseField name="expiresAt" type="string">
+  Payment expiration timestamp (ISO 8601) **Example:**
+  `"2024-01-01T12:30:00.000Z"`
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  Payment creation timestamp (ISO 8601) **Example:**
+  `"2024-01-01T12:00:00.000Z"`
+</ResponseField>
+
+<ResponseField name="completedAt" type="string">
+  Payment completion timestamp (ISO 8601, only present if completed)
+  **Example:** `"2024-01-01T12:15:00.000Z"`
+</ResponseField>
+
+## Payment Status Values
+
+| Status      | Description                                          |
+| ----------- | ---------------------------------------------------- |
+| `PENDING`   | Waiting for payment to be received or confirmed      |
+| `COMPLETED` | Payment received and confirmed on blockchain         |
+| `EXPIRED`   | Payment window expired without receiving full amount |
+| `FAILED`    | Payment failed due to an error                       |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.inventpay.io/v1/invoice/cmh123abc456def/status
+```
+
+```javascript JavaScript/TypeScript
+const status = await sdk.getPaymentStatus("cmh123abc456def");
+
+console.log("Status:", status.status);
+console.log("Balance:", status.currentBalance);
+console.log("Confirmations:", status.confirmations);
+```
+
+```python Python
+status = sdk.get_payment_status("cmh123abc456def")
+
+print(f"Status: {status.status}")
+print(f"Balance: {status.current_balance}")
+print(f"Confirmations: {status.confirmations}")
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - Pending Payment
+{
+  "paymentId": "cmh123abc456def",
+  "status": "PENDING",
+  "currentBalance": "0",
+  "confirmations": 0,
+  "requiredAmount": "29.99",
+  "currency": "USDT_BEP20",
+  "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+  "expiresAt": "2024-01-01T12:30:00.000Z",
+  "createdAt": "2024-01-01T12:00:00.000Z"
+}
+```
+
+```json 200 - Completed Payment
+{
+  "paymentId": "cmh123abc456def",
+  "status": "COMPLETED",
+  "currentBalance": "29.99",
+  "confirmations": 12,
+  "requiredAmount": "29.99",
+  "currency": "USDT_BEP20",
+  "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+  "expiresAt": "2024-01-01T12:30:00.000Z",
+  "createdAt": "2024-01-01T12:00:00.000Z",
+  "completedAt": "2024-01-01T12:15:00.000Z"
+}
+```
+
+```json 200 - Expired Payment
+{
+  "paymentId": "cmh123abc456def",
+  "status": "EXPIRED",
+  "currentBalance": "0",
+  "confirmations": 0,
+  "requiredAmount": "29.99",
+  "currency": "USDT_BEP20",
+  "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+  "expiresAt": "2024-01-01T12:30:00.000Z",
+  "createdAt": "2024-01-01T12:00:00.000Z"
+}
+```
+
+```json 404 - Payment Not Found
+{
+  "success": false,
+  "error": "Payment not found",
+  "statusCode": 404
+}
+```
+
+## Confirmation Requirements
+
+Different cryptocurrencies require different numbers of confirmations:
+
+| Cryptocurrency | Required Confirmations |
+| -------------- | ---------------------- |
+| BTC            | 3 confirmations        |
+| ETH            | 12 confirmations       |
+| LTC            | 6 confirmations        |
+| USDT (ERC20)   | 12 confirmations       |
+| USDT (BEP20)   | 15 confirmations       |
+
+<Note>
+  Payments are marked as `COMPLETED` once they receive the required number of
+  confirmations for their respective blockchain.
+</Note>
+
+## Polling Best Practices
+
+If you're not using webhooks, you can poll this endpoint to check payment status:
+
+- **Recommended interval:** 30-60 seconds
+- **Stop polling when:** Status becomes `COMPLETED`, `EXPIRED`, or `FAILED`
+- **Better alternative:** Use webhooks for real-time notifications
+
+<Warning>
+  Polling too frequently may result in rate limiting. We strongly recommend
+  using webhooks instead of polling.
+</Warning>
+
+## Error Codes
+
+| Status Code | Description                   |
+| ----------- | ----------------------------- |
+| 200         | Status retrieved successfully |
+| 404         | Payment not found             |
+| 429         | Rate limit exceeded           |
+| 500         | Internal server error         |

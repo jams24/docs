@@ -1,0 +1,210 @@
+---
+title: "Create Payment"
+description: "Create a fixed-currency payment request with a unique address"
+api: "POST /v1/create_payment"
+---
+
+## Overview
+
+This endpoint creates a payment request for a specific cryptocurrency. It generates a unique wallet address for the customer to send payment to and returns all necessary details including the payment address, amount, and invoice URL.
+
+Use this endpoint when you want the customer to pay in a specific cryptocurrency (e.g., only accept USDT_BEP20).
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key **Example:** `cmfnz7jei0005p54eekx4e6mb`
+</ParamField>
+
+## Request Body
+
+<ParamField body="amount" type="number" required>
+  The payment amount in the specified `amountCurrency` **Example:** `29.99`
+</ParamField>
+
+<ParamField body="amountCurrency" type="string" required>
+  The currency of the amount field **Options:** `USD`, `USDT`, `BTC`, `ETH`,
+  `LTC` **Example:** `"USD"`
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  The cryptocurrency the customer will pay with **Options:** `BTC`, `ETH`,
+  `LTC`, `USDT_ERC20`, `USDT_BEP20` **Example:** `"USDT_BEP20"`
+</ParamField>
+
+<ParamField body="orderId" type="string" optional>
+  Your internal order/transaction ID for reference **Example:** `"order-12345"`
+</ParamField>
+
+<ParamField body="description" type="string" optional>
+  Description of the payment/product **Example:** `"Premium Plan Subscription"`
+</ParamField>
+
+<ParamField body="callbackUrl" type="string" optional>
+  Webhook URL to receive payment notifications **Example:**
+  `"https://yourapp.com/webhooks/payments"`
+</ParamField>
+
+<ParamField body="expirationMinutes" type="number" optional>
+  Payment expiration time in minutes (5-1440) **Default:** `30` **Example:**
+  `60`
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Payment details object
+  <Expandable title="data properties">
+    <ResponseField name="paymentId" type="string">
+      Unique identifier for this payment **Example:** `"cmh123abc..."`
+    </ResponseField>
+
+    <ResponseField name="amount" type="number">
+      Payment amount in the specified cryptocurrency **Example:** `29.99`
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      The cryptocurrency for this payment **Example:** `"USDT_BEP20"`
+    </ResponseField>
+
+    <ResponseField name="address" type="string">
+      Unique wallet address for this payment **Example:**
+      `"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"`
+    </ResponseField>
+
+    <ResponseField name="invoiceUrl" type="string">
+      Hosted payment page URL **Example:**
+      `"https://inventpay.io/invoice/cmh123..."`
+    </ResponseField>
+
+    <ResponseField name="qrCode" type="string">
+      QR code data for payment **Example:**
+      `"usdt_bep20:0x742d35Cc...?amount=29.99"`
+    </ResponseField>
+
+    <ResponseField name="expiresAt" type="string">
+      Payment expiration timestamp (ISO 8601) **Example:**
+      `"2024-01-01T12:00:00.000Z"`
+    </ResponseField>
+
+    <ResponseField name="orderId" type="string">
+      Your order ID (if provided) **Example:** `"order-12345"`
+    </ResponseField>
+
+    <ResponseField name="description" type="string">
+      Payment description (if provided)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message **Example:** `"Payment created successfully"`
+</ResponseField>
+
+<ResponseField name="statusCode" type="number">
+  HTTP status code **Example:** `200`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.inventpay.io/v1/create_payment \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 29.99,
+    "amountCurrency": "USD",
+    "currency": "USDT_BEP20",
+    "orderId": "order-12345",
+    "description": "Premium Plan Subscription",
+    "expirationMinutes": 30
+  }'
+```
+
+```javascript JavaScript/TypeScript
+const payment = await sdk.createPayment({
+  amount: 29.99,
+  amountCurrency: "USD",
+  currency: "USDT_BEP20",
+  orderId: "order-12345",
+  description: "Premium Plan Subscription",
+  expirationMinutes: 30,
+});
+
+console.log(payment.data);
+```
+
+```python Python
+from inventpay import PaymentRequest
+
+payment = sdk.create_payment(
+    PaymentRequest(
+        amount=29.99,
+        amount_currency="USD",
+        currency="USDT_BEP20",
+        order_id="order-12345",
+        description="Premium Plan Subscription",
+        expiration_minutes=30
+    )
+)
+
+print(payment.data)
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - Success
+{
+  "success": true,
+  "data": {
+    "paymentId": "cmh123abc456def",
+    "amount": 29.99,
+    "currency": "USDT_BEP20",
+    "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    "invoiceUrl": "https://inventpay.io/invoice/cmh123abc456def",
+    "qrCode": "usdt_bep20:0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb?amount=29.99",
+    "expiresAt": "2024-01-01T12:30:00.000Z",
+    "orderId": "order-12345",
+    "description": "Premium Plan Subscription"
+  },
+  "message": "Payment created successfully",
+  "statusCode": 200
+}
+```
+
+```json 401 - Unauthorized
+{
+  "success": false,
+  "error": "Invalid API key",
+  "statusCode": 401
+}
+```
+
+```json 400 - Bad Request
+{
+  "success": false,
+  "error": "Validation failed",
+  "details": {
+    "currency": "Invalid currency. Must be one of: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20"
+  },
+  "statusCode": 400
+}
+```
+
+## Error Codes
+
+| Status Code | Description                  |
+| ----------- | ---------------------------- |
+| 200         | Payment created successfully |
+| 400         | Invalid request parameters   |
+| 401         | Invalid or missing API key   |
+| 429         | Rate limit exceeded          |
+| 500         | Internal server error        |

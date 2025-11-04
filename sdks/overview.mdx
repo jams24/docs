@@ -1,0 +1,200 @@
+---
+title: "SDK Overview"
+description: "Compare and choose the right InventPay SDK for your project"
+---
+
+## Available SDKs
+
+InventPay provides official SDKs for the most popular programming languages, making it easy to integrate cryptocurrency payments into your application.
+
+<CardGroup cols={2}>
+  <Card
+    title="JavaScript/TypeScript"
+    icon="js"
+    href="/sdks/javascript/installation"
+  >
+    Modern SDK with full TypeScript support for Node.js and browser environments
+  </Card>
+  <Card title="Python" icon="python" href="/sdks/python/installation">
+    Pythonic SDK with async support for Python 3.7+
+  </Card>
+</CardGroup>
+
+## SDK Comparison
+
+| Feature                | JavaScript/TypeScript    | Python             |
+| ---------------------- | ------------------------ | ------------------ |
+| **Language**           | JavaScript, TypeScript   | Python 3.7+        |
+| **Environment**        | Node.js 14+, Browser     | Server-side        |
+| **Async Support**      | ✅ Promises, async/await | ✅ asyncio support |
+| **Type Safety**        | ✅ Full TypeScript types | ✅ Type hints      |
+| **Auto-retry**         | ✅ Configurable          | ✅ Configurable    |
+| **Webhook Validation** | ✅ Built-in              | ✅ Built-in        |
+| **IDE Support**        | ✅ Excellent             | ✅ Excellent       |
+| **Documentation**      | ✅ Complete              | ✅ Complete        |
+
+## Choosing an SDK
+
+### Use JavaScript/TypeScript SDK if:
+
+<Check>You're building a Node.js application</Check>
+<Check>You need browser support for client-side operations</Check>
+<Check>You prefer TypeScript for type safety</Check>
+<Check>You're building with Next.js, Express, or similar frameworks</Check>
+
+### Use Python SDK if:
+
+<Check>You're building a Python web application (Django, Flask, FastAPI)</Check>
+<Check>You need async/await support</Check>
+<Check>Your backend is already in Python</Check>
+<Check>You prefer Python's syntax and ecosystem</Check>
+
+## Common Features
+
+All InventPay SDKs share these core features:
+
+### Payment Management
+
+- Create fixed-currency payments
+- Create multi-currency invoices
+- Retrieve payment status
+- List payment history
+
+### Balance Management
+
+- Get all balances
+- Get balance by currency
+- View transaction history
+
+### Withdrawal Management
+
+- Create withdrawals
+- Get withdrawal status
+- List withdrawal history
+
+### Webhook Handling
+
+- Verify webhook signatures
+- Parse webhook events
+- Type-safe event handling
+
+### Error Handling
+
+- Comprehensive error types
+- Detailed error messages
+- Automatic retry logic
+- Network error handling
+
+## Installation
+
+<CodeGroup>
+```bash npm
+npm install @inventpay/sdk
+```
+
+```bash yarn
+yarn add @inventpay/sdk
+```
+
+```bash pnpm
+pnpm add @inventpay/sdk
+```
+
+```bash pip
+pip install inventpay
+```
+
+</CodeGroup>
+
+## Quick Start Comparison
+
+<Tabs>
+  <Tab title="JavaScript/TypeScript">
+    ```typescript
+    import { InventPayClient } from '@inventpay/sdk';
+
+    const client = new InventPayClient({
+      apiKey: 'your-api-key',
+    });
+
+    // Create a payment
+    const payment = await client.payments.create({
+      amount: '100.00',
+      currency: 'BTC',
+      description: 'Order #12345',
+    });
+
+    console.log(payment.paymentAddress);
+    ```
+
+  </Tab>
+  
+  <Tab title="Python">
+    ```python
+    from inventpay import InventPayClient
+
+    client = InventPayClient(api_key='your-api-key')
+
+    # Create a payment
+    payment = client.payments.create(
+        amount='100.00',
+        currency='BTC',
+        description='Order #12345'
+    )
+
+    print(payment.payment_address)
+    ```
+
+  </Tab>
+</Tabs>
+
+## Authentication
+
+All SDKs use API key authentication. Get your API key from the [InventPay Dashboard](https://inventpay.io/dashboard/settings/api-keys).
+
+<Warning>
+  Never expose your API key in client-side code or public repositories. Always
+  use environment variables.
+</Warning>
+
+```bash .env
+INVENTPAY_API_KEY=your-api-key-here
+```
+
+## Support & Resources
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Complete API documentation
+  </Card>
+  <Card
+    title="Examples"
+    icon="code"
+    href="https://github.com/inventpay/examples"
+  >
+    Real-world integration examples
+  </Card>
+  <Card title="Support" icon="life-ring" href="mailto:support@inventpay.io">
+    Get help from our team
+  </Card>
+  <Card title="Status" icon="signal" href="https://status.inventpay.io">
+    Check API status
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<Steps>
+  <Step title="Choose Your SDK">
+    Select JavaScript/TypeScript or Python based on your stack
+  </Step>
+  <Step title="Install & Configure">
+    Install the SDK and configure with your API key
+  </Step>
+  <Step title="Create Your First Payment">
+    Follow the usage guide to create your first payment
+  </Step>
+  <Step title="Set Up Webhooks">
+    Configure webhooks to receive payment notifications
+  </Step>
+</Steps>

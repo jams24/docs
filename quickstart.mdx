@@ -1,80 +1,465 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Accept your first crypto payment in under 5 minutes"
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This quickstart guide will walk you through:
 
-### Step 1: Set up your local environment
+1. Installing the InventPay SDK
+2. Getting your API credentials
+3. Creating your first payment
+4. Checking payment status
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+By the end of this guide, you'll have a working integration that can accept cryptocurrency payments.
 
-### Step 2: Deploy your changes
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Before you begin, make sure you have:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+- An InventPay account (sign up at [inventpay.io](https://inventpay.io))
+- Node.js 14+ (for JavaScript/TypeScript) or Python 3.7+ (for Python)
+- Your API key from the [InventPay Dashboard](https://inventpay.io/dashboard)
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## Step 1: Install the SDK
 
-### Step 3: Go live
+Choose your preferred language and install the InventPay SDK:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<CodeGroup>
 
-## Next steps
+```bash npm
+npm install inventpay
+```
 
-Now that you have your docs running, explore these key features:
+```bash yarn
+yarn add inventpay
+```
 
-<CardGroup cols={2}>
+```bash pnpm
+pnpm add inventpay
+```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+```bash pip
+pip install inventpay
+```
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+</CodeGroup>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+## Step 2: Get Your API Key
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+1. Log in to your [InventPay Dashboard](https://inventpay.io/dashboard)
+2. Navigate to **Settings** → **API Keys**
+3. Click **Generate New API Key**
+4. Copy your API key and store it securely
 
-</CardGroup>
+<Warning>
+  Never expose your API key in client-side code or public repositories. Always
+  use environment variables to store sensitive credentials.
+</Warning>
+
+## Step 3: Initialize the SDK
+
+Set up the SDK with your API key:
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+import { PaymentSDK } from "inventpay";
+
+const sdk = new PaymentSDK({
+  apiKey: process.env.INVENTPAY_API_KEY, // Use environment variables
+});
+
+// Test the connection
+const connection = await sdk.testConnection();
+console.log(connection.message); // "API connection successful"
+```
+
+```python Python
+from inventpay import PaymentSDK, SDKConfig
+import os
+
+sdk = PaymentSDK(
+    SDKConfig(api_key=os.getenv('INVENTPAY_API_KEY'))
+)
+
+# Test the connection
+result = sdk.test_connection()
+print(result['message'])  # "API connection successful"
+```
+
+</CodeGroup>
+
+<Tip>
+  Testing the connection is optional but recommended to verify your API key is
+  valid before proceeding.
+</Tip>
+
+## Step 4: Create Your First Payment
+
+Now let's create a payment request. You have two options:
+
+### Option A: Fixed Currency Payment
+
+Create a payment for a specific cryptocurrency (customer must pay in that currency):
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+const payment = await sdk.createPayment({
+  amount: 29.99,
+  amountCurrency: "USD",
+  currency: "USDT_BEP20", // or BTC, ETH, LTC, USDT_ERC20
+  orderId: "order-12345",
+  description: "Premium Plan Subscription",
+  expirationMinutes: 30, // Optional: payment expires in 30 minutes
+});
+
+console.log("Payment Address:", payment.data.address);
+console.log("Amount Due:", payment.data.amount);
+console.log("Invoice URL:", payment.data.invoiceUrl);
+console.log("Payment ID:", payment.data.paymentId);
+```
+
+```python Python
+from inventpay import PaymentRequest
+
+payment = sdk.create_payment(
+    PaymentRequest(
+        amount=29.99,
+        amount_currency="USD",
+        currency="USDT_BEP20",
+        order_id="order-12345",
+        description="Premium Plan Subscription",
+        expiration_minutes=30
+    )
+)
+
+print(f"Payment Address: {payment.data['address']}")
+print(f"Amount Due: {payment.data['amount']}")
+print(f"Invoice URL: {payment.data['invoiceUrl']}")
+print(f"Payment ID: {payment.data['paymentId']}")
+```
+
+</CodeGroup>
+
+### Option B: Multi-Currency Invoice
+
+Create an invoice where customers can choose their preferred cryptocurrency:
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+const invoice = await sdk.createInvoice({
+  amount: 49.99,
+  amountCurrency: "USD",
+  orderId: "order-67890",
+  description: "E-commerce Purchase",
+  expirationMinutes: 60,
+});
+
+console.log("Invoice URL:", invoice.data.invoiceUrl);
+console.log("Payment ID:", invoice.data.paymentId);
+console.log("Available currencies:", Object.keys(invoice.data.conversionRates));
+// Output: ['BTC', 'ETH', 'LTC', 'USDT_ERC20', 'USDT_BEP20']
+```
+
+```python Python
+from inventpay import InvoiceRequest
+
+invoice = sdk.create_invoice(
+    InvoiceRequest(
+        amount=49.99,
+        amount_currency="USD",
+        order_id="order-67890",
+        description="E-commerce Purchase",
+        expiration_minutes=60
+    )
+)
+
+print(f"Invoice URL: {invoice.data['invoiceUrl']}")
+print(f"Payment ID: {invoice.data['paymentId']}")
+print(f"Available currencies: {list(invoice.data['conversionRates'].keys())}")
+```
+
+</CodeGroup>
+
+<Info>
+  The `invoiceUrl` is a hosted payment page where your customer can complete the
+  payment. You can redirect them to this URL or display it in an iframe.
+</Info>
+
+## Step 5: Check Payment Status
+
+You can check the status of any payment at any time:
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+// This endpoint is public - no API key required
+const status = await sdk.getPaymentStatus("your-payment-id");
+
+console.log("Status:", status.status); // PENDING, COMPLETED, EXPIRED, FAILED
+console.log("Current Balance:", status.currentBalance);
+console.log("Confirmations:", status.confirmations);
+
+// Check if payment is complete
+if (status.status === "COMPLETED") {
+  console.log("Payment received and confirmed!");
+}
+```
+
+```python Python
+status = sdk.get_payment_status("your-payment-id")
+
+print(f"Status: {status.status}")
+print(f"Current Balance: {status.current_balance}")
+print(f"Confirmations: {status.confirmations}")
+
+# Check if payment is complete
+if status.status == "COMPLETED":
+    print("Payment received and confirmed!")
+```
+
+</CodeGroup>
+
+### Payment Status Values
+
+| Status      | Description                                           |
+| ----------- | ----------------------------------------------------- |
+| `PENDING`   | Waiting for payment to be received                    |
+| `COMPLETED` | Payment received and confirmed                        |
+| `EXPIRED`   | Payment window expired without receiving full payment |
+| `FAILED`    | Payment failed due to an error                        |
+
+## Step 6: Set Up Webhooks (Recommended)
+
+Instead of polling for payment status, configure webhooks to receive real-time notifications:
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+await sdk.configureWebhook({
+  webhookUrl: "https://yourapp.com/api/webhooks/inventpay",
+});
+
+// Test webhook delivery
+const testResult = await sdk.testWebhook();
+console.log(testResult.message); // "Webhook test successful"
+```
+
+```python Python
+from inventpay import WebhookConfig
+
+sdk.configure_webhook(
+    WebhookConfig(webhook_url="https://yourapp.com/api/webhooks/inventpay")
+)
+
+# Test webhook delivery
+test_result = sdk.test_webhook()
+print(test_result['message'])  # "Webhook test successful"
+```
+
+</CodeGroup>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Learn more about handling webhooks in the [Webhooks
+  Guide](/webhooks/overview).
 </Note>
+
+## Next Steps
+
+Congratulations! You've successfully created your first crypto payment with InventPay. Here's what to explore next:
+
+<CardGroup cols={2}>
+  <Card title="Handle Webhooks" icon="bell" href="/webhooks/overview">
+    Set up real-time notifications for payment events
+  </Card>
+  <Card title="Manage Balances" icon="wallet" href="/guides/balances">
+    Check your balances and transaction history
+  </Card>
+  <Card
+    title="Process Withdrawals"
+    icon="arrow-right-from-bracket"
+    href="/guides/withdrawals"
+  >
+    Withdraw funds to external wallets
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all available endpoints and methods
+  </Card>
+</CardGroup>
+
+## Supported Cryptocurrencies
+
+InventPay supports the following cryptocurrencies:
+
+| Currency | Network           | Code         | Description                 |
+| -------- | ----------------- | ------------ | --------------------------- |
+| Bitcoin  | Bitcoin           | `BTC`        | Native Bitcoin network      |
+| Ethereum | Ethereum          | `ETH`        | Native Ethereum network     |
+| Litecoin | Litecoin          | `LTC`        | Native Litecoin network     |
+| Tether   | Ethereum (ERC-20) | `USDT_ERC20` | USDT on Ethereum            |
+| Tether   | BSC (BEP-20)      | `USDT_BEP20` | USDT on Binance Smart Chain |
+
+## Complete Example
+
+Here's a complete example showing payment creation and status checking:
+
+<CodeGroup>
+
+```javascript JavaScript/TypeScript
+import { PaymentSDK } from "inventpay";
+
+async function createAndMonitorPayment() {
+  const sdk = new PaymentSDK({
+    apiKey: process.env.INVENTPAY_API_KEY,
+  });
+
+  try {
+    // Create payment
+    const payment = await sdk.createPayment({
+      amount: 50,
+      amountCurrency: "USD",
+      currency: "USDT_BEP20",
+      orderId: `order-${Date.now()}`,
+      description: "Product Purchase",
+    });
+
+    console.log("Payment created!");
+    console.log("Send customer to:", payment.data.invoiceUrl);
+
+    // Monitor payment status
+    const paymentId = payment.data.paymentId;
+
+    // Poll every 30 seconds (in production, use webhooks instead)
+    const checkStatus = setInterval(async () => {
+      const status = await sdk.getPaymentStatus(paymentId);
+
+      console.log(`Status: ${status.status}`);
+
+      if (status.status === "COMPLETED") {
+        console.log("Payment received!");
+        clearInterval(checkStatus);
+      } else if (status.status === "EXPIRED" || status.status === "FAILED") {
+        console.log("Payment not completed");
+        clearInterval(checkStatus);
+      }
+    }, 30000);
+  } catch (error) {
+    console.error("Error:", error.message);
+  }
+}
+
+createAndMonitorPayment();
+```
+
+```python Python
+from inventpay import PaymentSDK, SDKConfig, PaymentRequest
+import os
+import time
+
+def create_and_monitor_payment():
+    sdk = PaymentSDK(SDKConfig(api_key=os.getenv('INVENTPAY_API_KEY')))
+
+    try:
+        # Create payment
+        payment = sdk.create_payment(
+            PaymentRequest(
+                amount=50,
+                amount_currency="USD",
+                currency="USDT_BEP20",
+                order_id=f"order-{int(time.time())}",
+                description="Product Purchase"
+            )
+        )
+
+        print("Payment created!")
+        print(f"Send customer to: {payment.data['invoiceUrl']}")
+
+        # Monitor payment status
+        payment_id = payment.data['paymentId']
+
+        # Poll every 30 seconds (in production, use webhooks instead)
+        while True:
+            status = sdk.get_payment_status(payment_id)
+            print(f"Status: {status.status}")
+
+            if status.status == "COMPLETED":
+                print("Payment received!")
+                break
+            elif status.status in ["EXPIRED", "FAILED"]:
+                print("Payment not completed")
+                break
+
+            time.sleep(30)
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    create_and_monitor_payment()
+```
+
+</CodeGroup>
+
+<Warning>
+  The example above uses polling for demonstration purposes. In production,
+  always use webhooks for real-time notifications instead of polling.
+</Warning>
+
+## Troubleshooting
+
+### Authentication Errors
+
+If you get a 401 Unauthorized error:
+
+- Verify your API key is correct
+- Ensure the API key is properly set in environment variables
+- Check that the API key hasn't been revoked in the dashboard
+
+### Payment Not Found
+
+If you get a 404 error when checking payment status:
+
+- Verify the payment ID is correct
+- Ensure the payment was created successfully
+- Check that you're using the correct environment (test/production)
+
+### Timeout Errors
+
+If requests are timing out:
+
+- Check your internet connection
+- Verify the InventPay API status
+- Try increasing the timeout value in SDK configuration
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card
+    title="Join Our Discord"
+    icon="discord"
+    href="https://discord.gg/inventpay"
+  >
+    Chat with other developers and get quick answers
+  </Card>
+  <Card
+    title="Email Support"
+    icon="envelope"
+    href="mailto:support@inventpay.io"
+  >
+    Contact our support team for technical assistance
+  </Card>
+  <Card title="API Status" icon="signal" href="https://status.inventpay.io">
+    Check the current status of InventPay services
+  </Card>
+  <Card
+    title="GitHub Issues"
+    icon="github"
+    href="https://github.com/inventpay/inventpay-sdk"
+  >
+    Report bugs or request features
+  </Card>
+</CardGroup>

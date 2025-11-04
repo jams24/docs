@@ -1,0 +1,755 @@
+---
+title: "JavaScript SDK Examples"
+description: "Real-world examples and code snippets for the InventPay JavaScript/TypeScript SDK"
+---
+
+## E-Commerce Integration
+
+### Complete Payment Flow
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+import express from "express";
+
+const app = express();
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+// Store for orders (use a real database in production)
+const orders = new Map();
+
+// 1. Create an order and payment
+app.post("/orders", express.json(), async (req, res) => {
+  const { items, customerEmail } = req.body;
+
+  // Calculate total
+  const total = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  try {
+    // Create payment
+    const payment = await client.payments.create({
+      amount: total.toString(),
+      currency: "BTC",
+      description: `Order for ${customerEmail}`,
+      callbackUrl: `${process.env.APP_URL}/webhooks/inventpay`,
+      metadata: {
+        orderType: "ecommerce",
+        customerEmail,
+        items: JSON.stringify(items),
+      },
+    });
+
+    // Store order
+    const order = {
+      id: payment.id,
+      items,
+      customerEmail,
+      total,
+      status: "pending",
+      paymentId: payment.id,
+      createdAt: new Date(),
+    };
+    orders.set(payment.id, order);
+
+    res.json({
+      orderId: payment.id,
+      paymentAddress: payment.paymentAddress,
+      amount: payment.amount,
+      currency: payment.currency,
+      expiresAt: payment.expiresAt,
+    });
+  } catch (error) {
+    console.error("Failed to create order:", error);
+    res.status(500).json({ error: "Failed to create order" });
+  }
+});
+
+// 2. Check order status
+app.get("/orders/:orderId", async (req, res) => {
+  const order = orders.get(req.params.orderId);
+
+  if (!order) {
+    return res.status(404).json({ error: "Order not found" });
+  }
+
+  try {
+    // Get latest payment status
+    const payment = await client.payments.get(order.paymentId);
+
+    res.json({
+      order,
+      payment: {
+        status: payment.status,
+        isPaid: payment.isPaid,
+        isConfirmed: payment.isConfirmed,
+        amountReceived: payment.amountReceived,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch order status" });
+  }
+});
+
+// 3. Handle webhook
+app.post(
+  "/webhooks/inventpay",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const signature = req.headers["x-inventpay-signature"] as string;
+    const payload = req.body.toString();
+
+    try {
+      const event = client.webhooks.verify(payload, signature);
+
+      if (event.type === "payment.confirmed") {
+        const order = orders.get(event.data.id);
+
+        if (order) {
+          order.status = "confirmed";
+          order.paidAt = new Date();
+
+          // Send confirmation email
+          await sendOrderConfirmation(order);
+
+          // Fulfill order
+          await fulfillOrder(order);
+        }
+      }
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("Webhook verification failed:", error);
+      res.status(400).send("Invalid signature");
+    }
+  }
+);
+
+async function sendOrderConfirmation(order: any) {
+  console.log(`Sending confirmation email to ${order.customerEmail}`);
+  // Implement email sending
+}
+
+async function fulfillOrder(order: any) {
+  console.log(`Fulfilling order ${order.id}`);
+  // Implement order fulfillment
+}
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});
+```
+
+## SaaS Subscription
+
+### Monthly Subscription with Invoice
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+import type { WebhookEvent } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+interface Subscription {
+  userId: string;
+  plan: "basic" | "pro" | "enterprise";
+  status: "active" | "inactive" | "cancelled";
+  currentPeriodEnd: Date;
+}
+
+const subscriptions = new Map<string, Subscription>();
+
+// Create subscription
+async function createSubscription(
+  userId: string,
+  plan: "basic" | "pro" | "enterprise"
+) {
+  const prices = {
+    basic: "9.99",
+    pro: "29.99",
+    enterprise: "99.99",
+  };
+
+  const invoice = await client.invoices.create({
+    amount: prices[plan],
+    currency: "USD",
+    description: `${
+      plan.charAt(0).toUpperCase() + plan.slice(1)
+    } Plan - Monthly`,
+    callbackUrl: `${process.env.APP_URL}/webhooks/inventpay`,
+    metadata: {
+      type: "subscription",
+      userId,
+      plan,
+      billingPeriod: "monthly",
+    },
+  });
+
+  // Store subscription
+  subscriptions.set(userId, {
+    userId,
+    plan,
+    status: "inactive",
+    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  });
+
+  return {
+    invoiceUrl: invoice.hostedUrl,
+    invoiceId: invoice.id,
+  };
+}
+
+// Handle subscription webhook
+async function handleSubscriptionWebhook(event: WebhookEvent) {
+  if (event.type === "invoice.paid") {
+    const { userId, plan } = event.data.metadata;
+    const subscription = subscriptions.get(userId);
+
+    if (subscription) {
+      subscription.status = "active";
+      subscription.currentPeriodEnd = new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000
+      );
+
+      console.log(`Subscription activated for user ${userId}`);
+
+      // Grant access to features
+      await grantPlanAccess(userId, plan);
+
+      // Schedule next billing
+      await scheduleNextBilling(userId);
+    }
+  }
+}
+
+async function grantPlanAccess(userId: string, plan: string) {
+  console.log(`Granting ${plan} access to user ${userId}`);
+  // Implement access control
+}
+
+async function scheduleNextBilling(userId: string) {
+  console.log(`Scheduling next billing for user ${userId}`);
+  // Implement billing schedule
+}
+
+// Example usage
+const { invoiceUrl } = await createSubscription("user_123", "pro");
+console.log("Subscribe here:", invoiceUrl);
+```
+
+## Marketplace Payout
+
+### Seller Withdrawals
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+interface Seller {
+  id: string;
+  balance: number;
+  withdrawalAddress: string;
+  withdrawalCurrency: string;
+}
+
+const sellers = new Map<string, Seller>();
+
+// Request withdrawal
+async function requestWithdrawal(sellerId: string, amount: string) {
+  const seller = sellers.get(sellerId);
+
+  if (!seller) {
+    throw new Error("Seller not found");
+  }
+
+  if (parseFloat(amount) > seller.balance) {
+    throw new Error("Insufficient balance");
+  }
+
+  try {
+    // Check balance before withdrawal
+    const balance = await client.balances.getByCurrency(
+      seller.withdrawalCurrency
+    );
+
+    if (parseFloat(balance.available) < parseFloat(amount)) {
+      throw new Error("Insufficient platform balance");
+    }
+
+    // Create withdrawal
+    const withdrawal = await client.withdrawals.create({
+      amount,
+      currency: seller.withdrawalCurrency,
+      address: seller.withdrawalAddress,
+      network: "bitcoin", // or 'ethereum', etc.
+    });
+
+    // Deduct from seller balance
+    seller.balance -= parseFloat(amount);
+
+    return {
+      withdrawalId: withdrawal.id,
+      status: withdrawal.status,
+      fee: withdrawal.fee,
+      estimatedArrival: withdrawal.estimatedArrival,
+    };
+  } catch (error) {
+    console.error("Withdrawal failed:", error);
+    throw error;
+  }
+}
+
+// Monitor withdrawal status
+async function monitorWithdrawal(withdrawalId: string) {
+  const checkStatus = async () => {
+    const withdrawal = await client.withdrawals.get(withdrawalId);
+
+    console.log(`Withdrawal ${withdrawalId}:`, {
+      status: withdrawal.status,
+      transactionHash: withdrawal.transactionHash,
+    });
+
+    if (withdrawal.status === "completed") {
+      console.log("Withdrawal completed!");
+      return;
+    }
+
+    if (withdrawal.status === "failed") {
+      console.error("Withdrawal failed:", withdrawal.failureReason);
+      return;
+    }
+
+    // Check again in 1 minute
+    setTimeout(checkStatus, 60000);
+  };
+
+  await checkStatus();
+}
+
+// Example usage
+sellers.set("seller_123", {
+  id: "seller_123",
+  balance: 1000,
+  withdrawalAddress: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+  withdrawalCurrency: "BTC",
+});
+
+const result = await requestWithdrawal("seller_123", "0.5");
+await monitorWithdrawal(result.withdrawalId);
+```
+
+## Gaming Platform
+
+### In-Game Purchases
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+interface GamePurchase {
+  playerId: string;
+  itemId: string;
+  itemName: string;
+  price: number;
+  currency: string;
+}
+
+// Create game purchase
+async function createGamePurchase(purchase: GamePurchase) {
+  const payment = await client.payments.create({
+    amount: purchase.price.toString(),
+    currency: purchase.currency,
+    description: `${purchase.itemName} for player ${purchase.playerId}`,
+    callbackUrl: `${process.env.APP_URL}/webhooks/game`,
+    metadata: {
+      type: "game_purchase",
+      playerId: purchase.playerId,
+      itemId: purchase.itemId,
+      itemName: purchase.itemName,
+    },
+  });
+
+  return {
+    paymentId: payment.id,
+    paymentAddress: payment.paymentAddress,
+    amount: payment.amount,
+    currency: payment.currency,
+    qrCode: payment.qrCodeUrl,
+  };
+}
+
+// Handle game purchase webhook
+async function handleGamePurchaseWebhook(event: any) {
+  if (event.type === "payment.confirmed") {
+    const { playerId, itemId, itemName } = event.data.metadata;
+
+    // Grant item to player
+    await grantGameItem(playerId, itemId);
+
+    // Log purchase
+    console.log(`Player ${playerId} purchased ${itemName}`);
+
+    // Send in-game notification
+    await sendInGameNotification(playerId, `You received: ${itemName}!`);
+  }
+}
+
+async function grantGameItem(playerId: string, itemId: string) {
+  console.log(`Granting item ${itemId} to player ${playerId}`);
+  // Implement item granting logic
+}
+
+async function sendInGameNotification(playerId: string, message: string) {
+  console.log(`Sending notification to ${playerId}: ${message}`);
+  // Implement notification system
+}
+```
+
+## Next.js E-Commerce
+
+### Full Next.js 14 App Router Example
+
+```typescript app/lib/inventpay.ts
+import { InventPayClient } from "@inventpay/sdk";
+
+export const inventpay = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+  baseURL: process.env.INVENTPAY_API_URL,
+});
+```
+
+```typescript app/api/checkout/route.ts
+import { NextResponse } from "next/server";
+import { inventpay } from "@/lib/inventpay";
+
+export async function POST(request: Request) {
+  try {
+    const { items, email } = await request.json();
+
+    // Calculate total
+    const total = items.reduce(
+      (sum: number, item: any) => sum + item.price * item.quantity,
+      0
+    );
+
+    // Create invoice (multi-currency)
+    const invoice = await inventpay.invoices.create({
+      amount: total.toString(),
+      currency: "USD",
+      description: `Order for ${email}`,
+      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/inventpay`,
+      metadata: {
+        email,
+        items: JSON.stringify(items),
+      },
+    });
+
+    return NextResponse.json({
+      invoiceId: invoice.id,
+      hostedUrl: invoice.hostedUrl,
+      paymentOptions: invoice.paymentOptions,
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+```
+
+```typescript app/api/webhooks/inventpay/route.ts
+import { NextResponse } from "next/server";
+import { inventpay } from "@/lib/inventpay";
+import { headers } from "next/headers";
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.text();
+    const headersList = headers();
+    const signature = headersList.get("x-inventpay-signature");
+
+    if (!signature) {
+      return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+    }
+
+    // Verify webhook
+    const event = inventpay.webhooks.verify(body, signature);
+
+    // Handle different event types
+    switch (event.type) {
+      case "invoice.paid":
+        await handleInvoicePaid(event.data);
+        break;
+
+      case "payment.confirmed":
+        await handlePaymentConfirmed(event.data);
+        break;
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (error: any) {
+    console.error("Webhook error:", error);
+    return NextResponse.json(
+      { error: "Webhook handling failed" },
+      { status: 400 }
+    );
+  }
+}
+
+async function handleInvoicePaid(invoice: any) {
+  const { email, items } = invoice.metadata;
+  console.log(`Invoice paid for ${email}`);
+  // Fulfill order, send email, etc.
+}
+
+async function handlePaymentConfirmed(payment: any) {
+  console.log(`Payment confirmed: ${payment.id}`);
+  // Update order status
+}
+```
+
+```typescript app/checkout/page.tsx
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function CheckoutPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleCheckout = async () => {
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: [{ id: "1", name: "Product 1", price: 99.99, quantity: 1 }],
+          email: "customer@example.com",
+        }),
+      });
+
+      const { hostedUrl } = await response.json();
+
+      // Redirect to InventPay checkout page
+      window.location.href = hostedUrl;
+    } catch (error) {
+      console.error("Checkout failed:", error);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Checkout</h1>
+      <button
+        onClick={handleCheckout}
+        disabled={loading}
+        className="bg-blue-600 text-white px-6 py-3 rounded-lg disabled:opacity-50"
+      >
+        {loading ? "Processing..." : "Pay with Crypto"}
+      </button>
+    </div>
+  );
+}
+```
+
+## Balance Dashboard
+
+### Real-Time Balance Monitoring
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+// Get balance summary
+async function getBalanceSummary() {
+  const balances = await client.balances.getAll();
+
+  const summary = {
+    total: 0,
+    byurrency: {} as Record<string, any>,
+  };
+
+  for (const balance of balances) {
+    summary.byCurrency[balance.currency] = {
+      available: balance.available,
+      pending: balance.pending,
+      total: balance.total,
+    };
+
+    // Convert to USD for total (would need exchange rates in practice)
+    summary.total += parseFloat(balance.total);
+  }
+
+  return summary;
+}
+
+// Monitor balance changes
+async function monitorBalances(interval = 60000) {
+  let previousBalances: any = {};
+
+  const check = async () => {
+    const balances = await client.balances.getAll();
+
+    for (const balance of balances) {
+      const previous = previousBalances[balance.currency];
+
+      if (previous && previous.total !== balance.total) {
+        console.log(`${balance.currency} balance changed:`);
+        console.log(`  Previous: ${previous.total}`);
+        console.log(`  Current: ${balance.total}`);
+        console.log(
+          `  Change: ${parseFloat(balance.total) - parseFloat(previous.total)}`
+        );
+      }
+
+      previousBalances[balance.currency] = balance;
+    }
+
+    setTimeout(check, interval);
+  };
+
+  await check();
+}
+
+// Example usage
+const summary = await getBalanceSummary();
+console.log("Balance Summary:", summary);
+
+// Start monitoring
+await monitorBalances(60000); // Check every minute
+```
+
+## Error Handling Examples
+
+### Comprehensive Error Handler
+
+```typescript
+import {
+  InventPayClient,
+  InventPayError,
+  AuthenticationError,
+  RateLimitError,
+  ValidationError,
+} from "@inventpay/sdk";
+
+const client = new InventPayClient({
+  apiKey: process.env.INVENTPAY_API_KEY!,
+});
+
+async function createPaymentWithErrorHandling(
+  amount: string,
+  currency: string
+) {
+  try {
+    return await client.payments.create({ amount, currency });
+  } catch (error) {
+    if (error instanceof AuthenticationError) {
+      console.error("Authentication failed - check your API key");
+      // Alert admin, rotate keys, etc.
+    } else if (error instanceof RateLimitError) {
+      console.error(`Rate limited - retry after ${error.retryAfter}s`);
+      // Implement exponential backoff
+      await new Promise((resolve) =>
+        setTimeout(resolve, error.retryAfter * 1000)
+      );
+      return createPaymentWithErrorHandling(amount, currency);
+    } else if (error instanceof ValidationError) {
+      console.error("Validation failed:", error.errors);
+      // Show user-friendly error messages
+      return { error: "Invalid payment details", details: error.errors };
+    } else if (error instanceof InventPayError) {
+      console.error("API error:", error.message);
+      // Log to error tracking service
+    } else {
+      console.error("Unexpected error:", error);
+      // Handle network errors, etc.
+    }
+
+    throw error;
+  }
+}
+```
+
+## Testing Examples
+
+### Unit Tests with Jest
+
+```typescript
+import { InventPayClient } from "@inventpay/sdk";
+
+describe("InventPay Integration", () => {
+  let client: InventPayClient;
+
+  beforeAll(() => {
+    client = new InventPayClient({
+      apiKey: process.env.INVENTPAY_TEST_API_KEY!,
+      baseURL: "https://sandbox-api.inventpay.io",
+    });
+  });
+
+  test("should create payment", async () => {
+    const payment = await client.payments.create({
+      amount: "100.00",
+      currency: "BTC",
+      description: "Test payment",
+    });
+
+    expect(payment).toBeDefined();
+    expect(payment.id).toBeTruthy();
+    expect(payment.amount).toBe("100.00");
+    expect(payment.currency).toBe("BTC");
+  });
+
+  test("should get payment status", async () => {
+    const payment = await client.payments.create({
+      amount: "50.00",
+      currency: "ETH",
+    });
+
+    const retrieved = await client.payments.get(payment.id);
+
+    expect(retrieved.id).toBe(payment.id);
+    expect(retrieved.status).toBe("pending");
+  });
+
+  test("should list payments", async () => {
+    const payments = await client.payments.list({ limit: 10 });
+
+    expect(Array.isArray(payments)).toBe(true);
+    expect(payments.length).toBeLessThanOrEqual(10);
+  });
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Complete API documentation
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/webhooks/overview">
+    Learn about webhook events
+  </Card>
+  <Card title="Best Practices" icon="shield-check" href="/concepts/payments">
+    Security and optimization tips
+  </Card>
+  <Card title="Support" icon="life-ring" href="mailto:support@inventpay.io">
+    Get help from our team
+  </Card>
+</CardGroup>
