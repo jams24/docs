@@ -7,7 +7,7 @@
     "light": "#22C55E",
     "dark": "#15803D"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/inventpay-svg.svg",
   "navigation": {
     "tabs": [
       {
@@ -98,8 +98,8 @@
     ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/inventpay-new1.jpg",
+    "dark": "/logo/inventpay-new1.jpg"
   },
   "navbar": {
     "links": [
