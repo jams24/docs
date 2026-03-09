@@ -133,7 +133,7 @@ Add to your Windsurf MCP configuration:
 
 | Tool | Description |
 |------|-------------|
-| `create_withdrawal` | Withdraw funds to an external wallet address |
+| `create_withdrawal` | Withdraw funds to an external wallet address (requires `INVENTPAY_WITHDRAWAL_KEY`) |
 | `get_withdrawal` | Check withdrawal status and transaction hash |
 
 ### Store Management
@@ -222,4 +222,5 @@ The AI agent will call `create_product` with the appropriate `digitalContent` fi
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `INVENTPAY_API_KEY` | Yes | — | Your InventPay merchant API key |
+| `INVENTPAY_WITHDRAWAL_KEY` | No | — | Withdrawal API key for programmatic withdrawals. Generate from **Dashboard → Settings → Withdrawal API Key**. Without this, `create_withdrawal` will be disabled. |
 | `INVENTPAY_BASE_URL` | No | `https://api.inventpay.io` | API base URL |

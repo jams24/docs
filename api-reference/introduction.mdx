@@ -46,6 +46,27 @@ The InventPay API uses API keys for authentication. Include your API key in the 
   use environment variables to store sensitive credentials.
 </Warning>
 
+### Withdrawal API Key
+
+Programmatic withdrawals require an additional `X-Withdrawal-Key` header. This is a separate key from your main API key, disabled by default for security.
+
+1. Go to **Dashboard → Settings → Withdrawal API Key**
+2. Click **"Generate Key"** to enable programmatic withdrawals
+3. Include both headers when creating withdrawals:
+
+```bash
+curl -X POST https://api.inventpay.io/v1/merchant/withdrawal/create \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "X-Withdrawal-Key: YOUR_WITHDRAWAL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 100, "currency": "USDT_BEP20", "destinationAddress": "0x..."}'
+```
+
+<Info>
+  Dashboard withdrawals use 2FA instead and do not need a withdrawal API key.
+  You can revoke the withdrawal key at any time to instantly disable all API-based withdrawals.
+</Info>
+
 ### Example Authentication
 
 <CodeGroup>

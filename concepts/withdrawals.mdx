@@ -75,6 +75,41 @@ graph LR
   </Accordion>
 </AccordionGroup>
 
+## Withdrawal API Key
+
+Programmatic withdrawals (via API, SDK, or MCP agents) require a **separate withdrawal API key** in addition to your standard API key. This is disabled by default for security.
+
+<CardGroup cols={2}>
+  <Card title="Dashboard Withdrawals" icon="browser">
+    Use **2FA verification** — no withdrawal key needed
+  </Card>
+  <Card title="API / MCP Withdrawals" icon="code">
+    Use **Withdrawal API Key** (`X-Withdrawal-Key` header)
+  </Card>
+</CardGroup>
+
+### Setting Up Your Withdrawal API Key
+
+<Steps>
+  <Step title="Go to Settings">
+    Navigate to **Dashboard → Settings → Withdrawal API Key**
+  </Step>
+  <Step title="Generate Key">
+    Click **"Generate Key"** to create your withdrawal API key (format: `wk_live_...`)
+  </Step>
+  <Step title="Copy and Store">
+    Copy the key immediately — it will only be shown once in full
+  </Step>
+  <Step title="Add to Your Integration">
+    Include the key as `X-Withdrawal-Key` header in withdrawal API requests, or set it as `INVENTPAY_WITHDRAWAL_KEY` environment variable for MCP agents
+  </Step>
+</Steps>
+
+<Warning>
+  Anyone with your withdrawal API key can initiate withdrawals from your account.
+  Keep it secret and revoke it immediately from the dashboard if compromised.
+</Warning>
+
 ## Creating a Withdrawal
 
 ### Using the API
@@ -82,38 +117,58 @@ graph LR
 <CodeGroup>
 
 ```javascript JavaScript/TypeScript
-const withdrawal = await sdk.createWithdrawal({
-  amount: 100,
-  currency: "USDT_BEP20",
-  destinationAddress: "0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
-  description: "Monthly payout",
-});
+const withdrawal = await fetch(
+  "https://api.inventpay.io/v1/merchant/withdrawal/create",
+  {
+    method: "POST",
+    headers: {
+      "X-API-Key": process.env.INVENTPAY_API_KEY,
+      "X-Withdrawal-Key": process.env.INVENTPAY_WITHDRAWAL_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: 100,
+      currency: "USDT_BEP20",
+      destinationAddress: "0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
+      description: "Monthly payout",
+    }),
+  }
+);
 
-console.log("Withdrawal ID:", withdrawal.data.withdrawalId);
-console.log("Status:", withdrawal.data.status);
-console.log("Net Amount:", withdrawal.data.metadata.netAmount);
+const data = await withdrawal.json();
+console.log("Withdrawal ID:", data.data.withdrawalId);
+console.log("Status:", data.data.status);
+console.log("Net Amount:", data.data.netAmount);
 ```
 
 ```python Python
-from inventpay import WithdrawalRequest
+import requests
 
-withdrawal = sdk.create_withdrawal(
-    WithdrawalRequest(
-        amount=100,
-        currency="USDT_BEP20",
-        destination_address="0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
-        description="Monthly payout"
-    )
+response = requests.post(
+    "https://api.inventpay.io/v1/merchant/withdrawal/create",
+    headers={
+        "X-API-Key": "YOUR_API_KEY",
+        "X-Withdrawal-Key": "YOUR_WITHDRAWAL_KEY",
+        "Content-Type": "application/json",
+    },
+    json={
+        "amount": 100,
+        "currency": "USDT_BEP20",
+        "destinationAddress": "0x1E3D6848dE165e64052f0F2A3dA8823A27CAc22D",
+        "description": "Monthly payout",
+    },
 )
 
-print(f"Withdrawal ID: {withdrawal.data['withdrawalId']}")
-print(f"Status: {withdrawal.data['status']}")
-print(f"Net Amount: {withdrawal.data['metadata']['netAmount']}")
+data = response.json()
+print(f"Withdrawal ID: {data['data']['withdrawalId']}")
+print(f"Status: {data['data']['status']}")
+print(f"Net Amount: {data['data']['netAmount']}")
 ```
 
 ```bash cURL
 curl -X POST https://api.inventpay.io/v1/merchant/withdrawal/create \
   -H "X-API-Key: YOUR_API_KEY" \
+  -H "X-Withdrawal-Key: YOUR_WITHDRAWAL_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 100,
@@ -424,7 +479,10 @@ InventPay employs multiple security layers for withdrawals:
     Optional whitelist of approved addresses
   </Card>
   <Card title="Two-Factor Auth" icon="mobile-screen">
-    Optional 2FA requirement for withdrawals
+    2FA required for dashboard withdrawals
+  </Card>
+  <Card title="Withdrawal API Key" icon="key">
+    Separate key required for programmatic withdrawals
   </Card>
   <Card title="Rate Limiting" icon="gauge-high">
     Automatic limits prevent abuse
