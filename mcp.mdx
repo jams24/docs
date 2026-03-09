@@ -17,7 +17,7 @@ With the MCP server, an AI agent can:
 ## Installation
 
 ```bash
-npm install -g @inventpay/mcp-server
+npm install -g inventpay-mcp
 ```
 
 ## Setup
@@ -44,7 +44,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "inventpay": {
       "command": "npx",
-      "args": ["-y", "@inventpay/mcp-server"],
+      "args": ["-y", "inventpay-mcp"],
       "env": {
         "INVENTPAY_API_KEY": "your-api-key-here"
       }
@@ -60,7 +60,7 @@ Restart Claude Desktop after saving.
 <Tab title="Claude Code">
 
 ```bash
-claude mcp add inventpay -- npx -y @inventpay/mcp-server
+claude mcp add inventpay -- npx -y inventpay-mcp
 ```
 
 Set the environment variable in your shell:
@@ -80,7 +80,7 @@ Add to `.cursor/mcp.json` in your project root:
   "mcpServers": {
     "inventpay": {
       "command": "npx",
-      "args": ["-y", "@inventpay/mcp-server"],
+      "args": ["-y", "inventpay-mcp"],
       "env": {
         "INVENTPAY_API_KEY": "your-api-key-here"
       }
@@ -100,7 +100,7 @@ Add to your Windsurf MCP configuration:
   "mcpServers": {
     "inventpay": {
       "command": "npx",
-      "args": ["-y", "@inventpay/mcp-server"],
+      "args": ["-y", "inventpay-mcp"],
       "env": {
         "INVENTPAY_API_KEY": "your-api-key-here"
       }
