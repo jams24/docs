@@ -224,3 +224,62 @@ The AI agent will call `create_product` with the appropriate `digitalContent` fi
 | `INVENTPAY_API_KEY` | Yes | — | Your InventPay merchant API key |
 | `INVENTPAY_WITHDRAWAL_KEY` | No | — | Withdrawal API key for programmatic withdrawals. Generate from **Dashboard → Settings → Withdrawal API Key**. Without this, `create_withdrawal` will be disabled. |
 | `INVENTPAY_BASE_URL` | No | `https://api.inventpay.io` | API base URL |
+
+## Agent Instructions
+
+Copy the prompt below into your agent's system instructions (CLAUDE.md, custom instructions, or system prompt) so it knows how to use the InventPay tools effectively.
+
+<Accordion title="Full agent prompt (click to expand)">
+
+````markdown
+# InventPay MCP Tools
+
+You have access to InventPay MCP tools for managing crypto payments, stores, and withdrawals.
+
+## Available Tools
+
+### Payments
+- `create_payment` — Create a crypto payment. Params: `amount` (number), `currency` (BTC|ETH|LTC|USDT_ERC20|USDT_BEP20), `amountCurrency` (USD|USDT), `orderId`, `description`, `callbackUrl`, `expirationMinutes`
+- `create_invoice` — Create a multi-currency invoice (customer picks crypto). Params: `amount`, `amountCurrency`, `orderId`, `description`, `expirationMinutes`
+- `get_payment_status` — Check payment status. Params: `paymentId`
+
+### Balances
+- `get_balances` — Get all crypto balances (available, pending, locked, earned, withdrawn)
+
+### Withdrawals
+- `create_withdrawal` — Withdraw to external wallet (requires INVENTPAY_WITHDRAWAL_KEY). Params: `amount`, `currency`, `destinationAddress`, `description`
+- `get_withdrawal` — Check withdrawal status. Params: `withdrawalId`
+
+### Store
+- `create_store` — Create a storefront. Params: `name`, `description`
+- `get_store` — Get store details
+- `update_store` — Update store. Params: `name`, `description`, `logo`, `banner`, `isPublished`
+
+### Products
+- `create_product` — Add product. Params: `name`, `price`, `currency`, `description`, `stock`, `images`, `digitalContent` (fileUrl, fileName, instructions, licenseKey, textContent)
+- `list_products` — List products. Params: `page`, `limit`, `search`
+- `update_product` — Update product. Params: `productId`, then same as create
+- `delete_product` — Deactivate product. Params: `productId`
+
+### Orders
+- `list_orders` — List orders. Params: `page`, `limit`, `status`
+- `get_order` — Get order details. Params: `orderId`
+- `update_order_status` — Update fulfillment. Params: `orderId`, `status` (PROCESSING|SHIPPED|COMPLETED|CANCELLED)
+
+### Analytics
+- `get_store_analytics` — Revenue breakdown, order counts, product stats
+
+## Guidelines
+- All amounts in USD unless specified otherwise
+- Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
+- Payment expiration: 5–1440 minutes (default 30)
+- Always confirm withdrawal details with the user before executing
+- Use `create_payment` for single-crypto, `create_invoice` for multi-crypto choice
+- Digital products auto-deliver after payment via `digitalContent` field
+````
+
+</Accordion>
+
+<Tip>
+  For Claude Code, save this as `CLAUDE.md` in your project root. For Claude Desktop or Cursor, paste it into your custom instructions or system prompt.
+</Tip>
