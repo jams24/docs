@@ -94,6 +94,29 @@ Download links are unique per order. Customers can access their downloads at:
 `https://inventpay.io/download/{token}`
 </Info>
 
+### Key Pool (Unique Keys Per Customer)
+
+For products where each customer needs a **unique** key, code, or piece of content (e.g. license keys, gift cards, premium access codes), you can use the **Key Pool** system.
+
+**How it works:**
+
+1. Upload a batch of unique keys to a product's key pool via the API or dashboard
+2. The product stock automatically syncs to the number of available keys
+3. When a customer pays, one key is assigned from the pool (FIFO — first uploaded, first assigned)
+4. The assigned key is delivered to the customer alongside the product's regular digital content
+5. When the pool runs out, the product becomes out of stock
+
+| API Endpoint | Description |
+| ------------ | ----------- |
+| `POST /v1/store/manage/products/{id}/keys` | Upload keys (up to 10,000 per request) |
+| `GET /v1/store/manage/products/{id}/keys` | List keys with status filter |
+| `GET /v1/store/manage/products/{id}/keys/stats` | Pool stats (available, assigned, revoked) |
+| `DELETE /v1/store/manage/products/{id}/keys` | Remove all available keys |
+
+<Tip>
+You can combine key pool with regular digital content. For example, a software product might deliver a unique license key from the pool **plus** a download URL and setup instructions from the product's `digitalContent`.
+</Tip>
+
 ### Orders
 
 When a customer checks out, an **Order** is created along with a **Payment**. The order tracks fulfillment while the payment tracks the crypto transaction.

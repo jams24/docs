@@ -1,0 +1,99 @@
+---
+title: "List Product Keys"
+description: "List keys in a product's key pool with status filter"
+api: "GET /v1/store/manage/products/{productId}/keys"
+---
+
+## Overview
+
+List all keys in a product's key pool. Filter by status to see available, assigned, or revoked keys. Supports pagination.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="productId" type="string" required>
+  The product ID
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" optional default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="integer" optional default="50">
+  Items per page (1-100)
+</ParamField>
+
+<ParamField query="status" type="string" optional>
+  Filter by key status: `AVAILABLE`, `ASSIGNED`, or `REVOKED`
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="data properties">
+    <ResponseField name="keys" type="array">
+      Array of key objects
+      <Expandable title="key properties">
+        <ResponseField name="id" type="string">Key ID</ResponseField>
+        <ResponseField name="keyValue" type="string">The key/code value</ResponseField>
+        <ResponseField name="label" type="string | null">Batch label</ResponseField>
+        <ResponseField name="status" type="string">AVAILABLE, ASSIGNED, or REVOKED</ResponseField>
+        <ResponseField name="orderId" type="string | null">Order ID that claimed this key</ResponseField>
+        <ResponseField name="assignedAt" type="string | null">When the key was assigned (ISO 8601)</ResponseField>
+        <ResponseField name="createdAt" type="string">When the key was uploaded (ISO 8601)</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="pagination" type="object">
+      Pagination details (page, limit, total, pages)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl "https://api.inventpay.io/v1/store/manage/products/cm1prod123/keys?status=AVAILABLE&limit=10" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "keys": [
+      {
+        "id": "cm1key001",
+        "keyValue": "LICENSE-AAAA-BBBB-0001",
+        "label": "January Batch",
+        "status": "AVAILABLE",
+        "orderId": null,
+        "assignedAt": null,
+        "createdAt": "2026-03-09T12:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 47,
+      "pages": 5
+    }
+  }
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Keys listed successfully |
+| 401 | Invalid or missing API key |
+| 404 | Product or store not found |

@@ -1,0 +1,73 @@
+---
+title: "Get Key Pool Stats"
+description: "Get key pool statistics for a product"
+api: "GET /v1/store/manage/products/{productId}/keys/stats"
+---
+
+## Overview
+
+Get a summary of a product's key pool: how many keys are available, assigned, revoked, and total.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="productId" type="string" required>
+  The product ID
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="data properties">
+    <ResponseField name="available" type="integer">
+      Keys ready to be assigned to new customers
+    </ResponseField>
+    <ResponseField name="assigned" type="integer">
+      Keys already assigned to paid orders
+    </ResponseField>
+    <ResponseField name="revoked" type="integer">
+      Keys that have been revoked (e.g. refunds)
+    </ResponseField>
+    <ResponseField name="total" type="integer">
+      Total keys in the pool
+    </ResponseField>
+    <ResponseField name="useKeyPool" type="boolean">
+      Whether key pool is enabled for this product
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl "https://api.inventpay.io/v1/store/manage/products/cm1prod123/keys/stats" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "available": 47,
+    "assigned": 153,
+    "revoked": 2,
+    "total": 202,
+    "useKeyPool": true
+  }
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Stats retrieved successfully |
+| 401 | Invalid or missing API key |
+| 404 | Product or store not found |

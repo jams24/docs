@@ -153,6 +153,14 @@ Add to your Windsurf MCP configuration:
 | `update_product` | Update product details, price, stock, or digital content |
 | `delete_product` | Deactivate a product from your store |
 
+### Key Pool
+
+| Tool | Description |
+|------|-------------|
+| `add_product_keys` | Upload unique keys/codes to a product's pool (license keys, gift cards, etc.) |
+| `list_product_keys` | List keys in the pool with status filter (AVAILABLE, ASSIGNED, REVOKED) |
+| `get_key_pool_stats` | Get pool statistics: available, assigned, revoked, and total counts |
+
 ### Orders
 
 | Tool | Description |
@@ -272,6 +280,11 @@ Products:
 - update_product — Update product. Params: productId, then same as create
 - delete_product — Deactivate product. Params: productId
 
+Key Pool:
+- add_product_keys — Upload unique keys/codes to a product pool. Params: productId, keys (string[]), label
+- list_product_keys — List keys in pool. Params: productId, page, limit, status (AVAILABLE|ASSIGNED|REVOKED)
+- get_key_pool_stats — Get pool stats (available, assigned, revoked, total). Params: productId
+
 Orders:
 - list_orders — List orders. Params: page, limit, status
 - get_order — Get order details. Params: orderId
@@ -338,6 +351,12 @@ Products:
 - GET /v1/store/manage/products — List products. Query: ?page=1&limit=20&search=term
 - PUT /v1/store/manage/products/{productId} — Update product
 - DELETE /v1/store/manage/products/{productId} — Delete product
+
+Key Pool (unique keys per customer):
+- POST /v1/store/manage/products/{productId}/keys — Upload keys. Body: { keys: ["KEY1", "KEY2", ...], label: "Batch #1" }
+- GET /v1/store/manage/products/{productId}/keys — List keys. Query: ?page=1&limit=50&status=AVAILABLE
+- GET /v1/store/manage/products/{productId}/keys/stats — Get pool stats (available, assigned, revoked, total)
+- DELETE /v1/store/manage/products/{productId}/keys — Remove all available (unassigned) keys
 
 Orders:
 - GET /v1/store/manage/orders — List orders. Query: ?page=1&limit=20&status=PAID

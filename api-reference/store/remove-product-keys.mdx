@@ -1,0 +1,62 @@
+---
+title: "Remove Available Keys"
+description: "Remove all available (unassigned) keys from a product's pool"
+api: "DELETE /v1/store/manage/products/{productId}/keys"
+---
+
+## Overview
+
+Remove all **available** (unassigned) keys from a product's key pool. Already assigned keys are not affected. The product stock is updated to reflect the remaining available keys.
+
+<Warning>
+This action cannot be undone. Only available keys are removed — keys already assigned to orders are preserved.
+</Warning>
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="productId" type="string" required>
+  The product ID
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="data properties">
+    <ResponseField name="removed" type="integer">
+      Number of keys removed
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X DELETE "https://api.inventpay.io/v1/store/manage/products/cm1prod123/keys" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "removed": 47
+  },
+  "message": "Removed 47 available keys"
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Keys removed successfully |
+| 401 | Invalid or missing API key |
+| 404 | Product or store not found |
