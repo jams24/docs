@@ -1,0 +1,162 @@
+---
+title: "Create Store"
+description: "Create a storefront for your merchant account"
+api: "POST /v1/store/manage"
+---
+
+## Overview
+
+Creates a new store for your merchant account. Each merchant can have **one store**. A unique URL slug is automatically generated from the store name.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  Store name (2-100 characters) **Example:** `"My Crypto Shop"`
+</ParamField>
+
+<ParamField body="description" type="string" optional>
+  Store description (max 1000 characters) **Example:** `"Digital products and services"`
+</ParamField>
+
+<ParamField body="logo" type="string" optional>
+  HTTPS URL for store logo image **Example:** `"https://example.com/logo.png"`
+</ParamField>
+
+<ParamField body="banner" type="string" optional>
+  HTTPS URL for store banner image **Example:** `"https://example.com/banner.jpg"`
+</ParamField>
+
+<ParamField body="settings" type="object" optional>
+  Custom store settings (theme, social links, etc.)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Store details
+  <Expandable title="data properties">
+    <ResponseField name="id" type="string">
+      Unique store identifier
+    </ResponseField>
+    <ResponseField name="merchantId" type="string">
+      Your merchant ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Store name
+    </ResponseField>
+    <ResponseField name="slug" type="string">
+      URL-safe store slug **Example:** `"my-crypto-shop"`
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Store description
+    </ResponseField>
+    <ResponseField name="isActive" type="boolean">
+      Whether the store is publicly visible
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      Creation timestamp (ISO 8601)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.inventpay.io/v1/store/manage \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Crypto Shop",
+    "description": "Digital products and services"
+  }'
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch("https://api.inventpay.io/v1/store/manage", {
+  method: "POST",
+  headers: {
+    "X-API-Key": "YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "My Crypto Shop",
+    description: "Digital products and services",
+  }),
+});
+
+const store = await response.json();
+console.log(store.data.slug); // "my-crypto-shop"
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "https://api.inventpay.io/v1/store/manage",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    json={
+        "name": "My Crypto Shop",
+        "description": "Digital products and services"
+    }
+)
+
+store = response.json()
+print(store["data"]["slug"])  # "my-crypto-shop"
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 201 - Created
+{
+  "success": true,
+  "data": {
+    "id": "cm1abc2def3ghi",
+    "merchantId": "cmh456xyz",
+    "name": "My Crypto Shop",
+    "slug": "my-crypto-shop",
+    "description": "Digital products and services",
+    "logo": null,
+    "banner": null,
+    "currency": "USDT_ERC20",
+    "isActive": true,
+    "settings": {},
+    "createdAt": "2025-01-15T10:30:00.000Z",
+    "merchant": {
+      "id": "cmh456xyz",
+      "businessName": "Acme Inc"
+    }
+  },
+  "message": "Store created successfully"
+}
+```
+
+```json 409 - Store Already Exists
+{
+  "success": false,
+  "error": "You already have a store. Use PUT to update it."
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 201 | Store created successfully |
+| 400 | Invalid request parameters |
+| 401 | Invalid or missing API key |
+| 409 | Merchant already has a store |
+| 429 | Rate limit exceeded |

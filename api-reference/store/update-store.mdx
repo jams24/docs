@@ -1,0 +1,132 @@
+---
+title: "Update Store"
+description: "Update your store settings and details"
+api: "PUT /v1/store/manage"
+---
+
+## Overview
+
+Updates the authenticated merchant's store. Only provided fields are changed — omitted fields remain unchanged.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Request Body
+
+<ParamField body="name" type="string" optional>
+  Store name (2-100 characters)
+</ParamField>
+
+<ParamField body="description" type="string" optional>
+  Store description (max 1000 characters)
+</ParamField>
+
+<ParamField body="logo" type="string" optional>
+  HTTPS URL for store logo image
+</ParamField>
+
+<ParamField body="banner" type="string" optional>
+  HTTPS URL for store banner image
+</ParamField>
+
+<ParamField body="isActive" type="boolean" optional>
+  Toggle store visibility. Set `false` to hide the store from customers.
+</ParamField>
+
+<ParamField body="settings" type="object" optional>
+  Custom store settings (theme, social links, etc.)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Updated store details (same shape as [Get Store](/api-reference/store/get-store))
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://api.inventpay.io/v1/store/manage \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Updated description",
+    "isActive": true
+  }'
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch("https://api.inventpay.io/v1/store/manage", {
+  method: "PUT",
+  headers: {
+    "X-API-Key": "YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    description: "Updated description",
+    isActive: true,
+  }),
+});
+
+const store = await response.json();
+console.log(store.data.slug);
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    "https://api.inventpay.io/v1/store/manage",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    json={
+        "description": "Updated description",
+        "isActive": True
+    }
+)
+
+store = response.json()
+print(store["data"]["slug"])
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "id": "cm1abc2def3ghi",
+    "merchantId": "cmh456xyz",
+    "name": "My Crypto Shop",
+    "slug": "my-crypto-shop",
+    "description": "Updated description",
+    "logo": null,
+    "banner": null,
+    "currency": "USDT_ERC20",
+    "isActive": true,
+    "settings": {},
+    "createdAt": "2025-01-15T10:30:00.000Z"
+  },
+  "message": "Store updated successfully"
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Store updated successfully |
+| 400 | Invalid request parameters |
+| 401 | Invalid or missing API key |
+| 404 | No store found |
+| 429 | Rate limit exceeded |

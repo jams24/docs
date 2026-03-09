@@ -1,0 +1,69 @@
+---
+title: "Delete Product"
+description: "Deactivate a product from your store"
+api: "DELETE /v1/store/manage/products/{id}"
+---
+
+## Overview
+
+Deactivates a product, hiding it from the storefront. Products with existing orders cannot be permanently deleted — they are soft-deleted (set to `isActive: false`).
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Product ID
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.inventpay.io/v1/store/manage/products/cm1prod123abc \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch(
+  "https://api.inventpay.io/v1/store/manage/products/cm1prod123abc",
+  {
+    method: "DELETE",
+    headers: { "X-API-Key": "YOUR_API_KEY" },
+  }
+);
+```
+
+```python Python
+import requests
+
+response = requests.delete(
+    "https://api.inventpay.io/v1/store/manage/products/cm1prod123abc",
+    headers={"X-API-Key": "YOUR_API_KEY"}
+)
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "message": "Product deactivated successfully"
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Product deactivated successfully |
+| 401 | Invalid or missing API key |
+| 404 | Product or store not found |
+| 429 | Rate limit exceeded |

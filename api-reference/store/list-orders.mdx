@@ -1,0 +1,117 @@
+---
+title: "List Orders"
+description: "List all orders for your store"
+api: "GET /v1/store/manage/orders"
+---
+
+## Overview
+
+Returns a paginated list of orders for your store. Optionally filter by order status.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" optional>
+  Page number (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="integer" optional>
+  Items per page, 1-50 (default: 20)
+</ParamField>
+
+<ParamField query="status" type="string" optional>
+  Filter by status: `PENDING`, `PAID`, `PROCESSING`, `SHIPPED`, `COMPLETED`, `CANCELLED`, `REFUNDED`
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.inventpay.io/v1/store/manage/orders?status=PAID&limit=10" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch(
+  "https://api.inventpay.io/v1/store/manage/orders?status=PAID&limit=10",
+  {
+    headers: { "X-API-Key": "YOUR_API_KEY" },
+  }
+);
+
+const { data } = await response.json();
+data.orders.forEach((order) => {
+  console.log(`${order.orderNumber}: ${order.total} USDT`);
+});
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.inventpay.io/v1/store/manage/orders",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    params={"status": "PAID", "limit": 10}
+)
+
+for order in response.json()["data"]["orders"]:
+    print(f"{order['orderNumber']}: {order['total']} USDT")
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "orders": [
+      {
+        "id": "cm1order789xyz",
+        "orderNumber": "ORD-M1A2B3C-D4E5",
+        "status": "PAID",
+        "total": "49.99",
+        "currency": "USDT",
+        "customerEmail": "customer@example.com",
+        "customerName": "John Doe",
+        "items": [
+          {
+            "product": { "name": "Premium API Access" },
+            "quantity": 1,
+            "unitPrice": "49.99",
+            "totalPrice": "49.99"
+          }
+        ],
+        "payment": {
+          "status": "COMPLETED",
+          "amount": "0.01825",
+          "currency": "ETH"
+        },
+        "createdAt": "2025-01-15T12:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Orders listed successfully |
+| 401 | Invalid or missing API key |
+| 404 | No store found |
+| 429 | Rate limit exceeded |

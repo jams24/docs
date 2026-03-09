@@ -1,0 +1,65 @@
+---
+title: "Get Public Store"
+description: "Retrieve a store's public storefront info"
+api: "GET /v1/store/{slug}"
+---
+
+## Overview
+
+Returns public storefront information for a store. This is a **public endpoint** — no authentication required. Use this to display the store's branding and configuration.
+
+## Path Parameters
+
+<ParamField path="slug" type="string" required>
+  Store slug (lowercase alphanumeric with hyphens)
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.inventpay.io/v1/store/my-crypto-shop
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch("https://api.inventpay.io/v1/store/my-crypto-shop");
+const store = await response.json();
+console.log(store.data.name); // "My Crypto Shop"
+```
+
+```python Python
+import requests
+
+response = requests.get("https://api.inventpay.io/v1/store/my-crypto-shop")
+store = response.json()
+print(store["data"]["name"])
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "name": "My Crypto Shop",
+    "slug": "my-crypto-shop",
+    "description": "Digital products and services",
+    "logo": null,
+    "banner": null,
+    "currency": "USDT_ERC20",
+    "settings": {},
+    "merchantName": "Acme Inc"
+  }
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Store retrieved successfully |
+| 404 | Store not found or inactive |
+| 429 | Rate limit exceeded |

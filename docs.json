@@ -23,7 +23,8 @@
               "concepts/payments",
               "concepts/currencies",
               "concepts/balances",
-              "concepts/withdrawals"
+              "concepts/withdrawals",
+              "concepts/store"
             ]
           },
           {
@@ -64,6 +65,23 @@
             "pages": [
               "api-reference/create-withdrawal",
               "api-reference/get-withdrawal"
+            ]
+          },
+          {
+            "group": "Store",
+            "pages": [
+              "api-reference/store/create-store",
+              "api-reference/store/get-store",
+              "api-reference/store/update-store",
+              "api-reference/store/create-product",
+              "api-reference/store/list-products",
+              "api-reference/store/update-product",
+              "api-reference/store/delete-product",
+              "api-reference/store/list-orders",
+              "api-reference/store/get-order",
+              "api-reference/store/update-order-status",
+              "api-reference/store/checkout",
+              "api-reference/store/get-public-store"
             ]
           }
         ]

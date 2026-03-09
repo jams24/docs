@@ -1,0 +1,128 @@
+---
+title: "List Products"
+description: "List all products in your store"
+api: "GET /v1/store/manage/products"
+---
+
+## Overview
+
+Returns a paginated list of all products in your store, including inactive ones. Use query parameters to filter and search.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" optional>
+  Page number (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="integer" optional>
+  Items per page, 1-50 (default: 20)
+</ParamField>
+
+<ParamField query="search" type="string" optional>
+  Search products by name (max 100 characters)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data properties">
+    <ResponseField name="products" type="array">
+      Array of product objects
+    </ResponseField>
+    <ResponseField name="pagination" type="object">
+      <Expandable title="pagination properties">
+        <ResponseField name="page" type="integer">Current page</ResponseField>
+        <ResponseField name="limit" type="integer">Items per page</ResponseField>
+        <ResponseField name="total" type="integer">Total products</ResponseField>
+        <ResponseField name="totalPages" type="integer">Total pages</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.inventpay.io/v1/store/manage/products?page=1&limit=10" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch(
+  "https://api.inventpay.io/v1/store/manage/products?page=1&limit=10",
+  {
+    headers: { "X-API-Key": "YOUR_API_KEY" },
+  }
+);
+
+const { data } = await response.json();
+console.log(`${data.pagination.total} products found`);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://api.inventpay.io/v1/store/manage/products",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    params={"page": 1, "limit": 10}
+)
+
+data = response.json()["data"]
+print(f"{data['pagination']['total']} products found")
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "products": [
+      {
+        "id": "cm1prod123abc",
+        "name": "Premium API Access",
+        "slug": "premium-api-access",
+        "description": "Unlimited API calls for 30 days",
+        "price": "49.99",
+        "images": ["https://example.com/product.jpg"],
+        "stock": 100,
+        "variants": [],
+        "isActive": true,
+        "sortOrder": 0,
+        "metadata": {},
+        "createdAt": "2025-01-15T11:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Products listed successfully |
+| 401 | Invalid or missing API key |
+| 404 | No store found |
+| 429 | Rate limit exceeded |

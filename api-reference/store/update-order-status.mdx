@@ -1,0 +1,116 @@
+---
+title: "Update Order Status"
+description: "Update the fulfillment status of an order"
+api: "PUT /v1/store/manage/orders/{id}/status"
+---
+
+## Overview
+
+Updates an order's fulfillment status. Only valid transitions are allowed (e.g., `PAID → PROCESSING → SHIPPED → COMPLETED`).
+
+**Valid transitions:**
+
+| From | Allowed To |
+| ---- | ---------- |
+| `PAID` | `PROCESSING`, `CANCELLED` |
+| `PROCESSING` | `SHIPPED`, `CANCELLED` |
+| `SHIPPED` | `COMPLETED` |
+| `COMPLETED` | `REFUNDED` |
+
+<Info>
+The `PENDING → PAID` transition happens automatically when crypto payment is confirmed on-chain.
+</Info>
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Order ID
+</ParamField>
+
+## Request Body
+
+<ParamField body="status" type="string" required>
+  New order status: `PROCESSING`, `SHIPPED`, `COMPLETED`, `CANCELLED`, `REFUNDED`
+</ParamField>
+
+<ParamField body="notes" type="string" optional>
+  Optional note (max 500 characters). Use for tracking numbers, cancellation reasons, etc.
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://api.inventpay.io/v1/store/manage/orders/cm1order789xyz/status \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "SHIPPED",
+    "notes": "Tracking: 1Z999AA10123456784"
+  }'
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch(
+  "https://api.inventpay.io/v1/store/manage/orders/cm1order789xyz/status",
+  {
+    method: "PUT",
+    headers: {
+      "X-API-Key": "YOUR_API_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      status: "SHIPPED",
+      notes: "Tracking: 1Z999AA10123456784",
+    }),
+  }
+);
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    "https://api.inventpay.io/v1/store/manage/orders/cm1order789xyz/status",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    json={
+        "status": "SHIPPED",
+        "notes": "Tracking: 1Z999AA10123456784"
+    }
+)
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "id": "cm1order789xyz",
+    "orderNumber": "ORD-M1A2B3C-D4E5",
+    "status": "SHIPPED",
+    "notes": "Tracking: 1Z999AA10123456784",
+    "updatedAt": "2025-01-16T09:00:00.000Z"
+  },
+  "message": "Order status updated to SHIPPED"
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Status updated successfully |
+| 400 | Invalid status transition |
+| 401 | Invalid or missing API key |
+| 404 | Order or store not found |
+| 429 | Rate limit exceeded |

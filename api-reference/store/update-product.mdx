@@ -1,0 +1,134 @@
+---
+title: "Update Product"
+description: "Update a product in your store"
+api: "PUT /v1/store/manage/products/{id}"
+---
+
+## Overview
+
+Updates an existing product. Only provided fields are changed. Updating the name will regenerate the slug.
+
+## Authentication
+
+<ParamField header="X-API-Key" type="string" required>
+  Your InventPay API key
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  Product ID
+</ParamField>
+
+## Request Body
+
+<ParamField body="name" type="string" optional>
+  Product name (1-200 characters)
+</ParamField>
+
+<ParamField body="description" type="string" optional>
+  Product description (max 5000 characters)
+</ParamField>
+
+<ParamField body="price" type="number" optional>
+  Price in USDT (0.01 - 1,000,000)
+</ParamField>
+
+<ParamField body="images" type="string[]" optional>
+  Array of HTTPS image URLs (max 10)
+</ParamField>
+
+<ParamField body="stock" type="integer" optional>
+  Available quantity (0 - 999,999)
+</ParamField>
+
+<ParamField body="variants" type="array" optional>
+  Variant options (max 20)
+</ParamField>
+
+<ParamField body="isActive" type="boolean" optional>
+  Toggle product visibility
+</ParamField>
+
+<ParamField body="sortOrder" type="integer" optional>
+  Display order (0 - 9999)
+</ParamField>
+
+<ParamField body="metadata" type="object" optional>
+  Custom key-value data
+</ParamField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://api.inventpay.io/v1/store/manage/products/cm1prod123abc \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "price": 39.99,
+    "stock": 50
+  }'
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch(
+  "https://api.inventpay.io/v1/store/manage/products/cm1prod123abc",
+  {
+    method: "PUT",
+    headers: {
+      "X-API-Key": "YOUR_API_KEY",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      price: 39.99,
+      stock: 50,
+    }),
+  }
+);
+
+const product = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    "https://api.inventpay.io/v1/store/manage/products/cm1prod123abc",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    json={"price": 39.99, "stock": 50}
+)
+
+product = response.json()
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 - OK
+{
+  "success": true,
+  "data": {
+    "id": "cm1prod123abc",
+    "name": "Premium API Access",
+    "slug": "premium-api-access",
+    "price": "39.99",
+    "stock": 50,
+    "isActive": true,
+    "createdAt": "2025-01-15T11:00:00.000Z"
+  },
+  "message": "Product updated successfully"
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Product updated successfully |
+| 400 | Invalid request parameters |
+| 401 | Invalid or missing API key |
+| 404 | Product or store not found |
+| 429 | Rate limit exceeded |
