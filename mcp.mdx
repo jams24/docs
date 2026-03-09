@@ -1,0 +1,225 @@
+---
+title: "MCP Server"
+description: "Connect AI agents to InventPay using the Model Context Protocol"
+---
+
+## Overview
+
+The InventPay MCP Server lets AI agents (Claude, Cursor, Windsurf, and any MCP-compatible client) manage crypto payments, stores, products, and orders through natural language.
+
+With the MCP server, an AI agent can:
+- Create and manage a crypto storefront
+- Add digital products with automatic delivery
+- Accept crypto payments and track balances
+- Monitor orders and revenue
+- Process withdrawals
+
+## Installation
+
+```bash
+npm install -g @inventpay/mcp-server
+```
+
+## Setup
+
+### 1. Get your API Key
+
+1. Sign up at [inventpay.io](https://inventpay.io)
+2. Go to **Dashboard → Settings**
+3. Copy your API key
+
+### 2. Configure your AI tool
+
+<Tabs>
+
+<Tab title="Claude Desktop">
+
+Add to your `claude_desktop_config.json`:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "inventpay": {
+      "command": "npx",
+      "args": ["-y", "@inventpay/mcp-server"],
+      "env": {
+        "INVENTPAY_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving.
+
+</Tab>
+
+<Tab title="Claude Code">
+
+```bash
+claude mcp add inventpay -- npx -y @inventpay/mcp-server
+```
+
+Set the environment variable in your shell:
+
+```bash
+export INVENTPAY_API_KEY="your-api-key-here"
+```
+
+</Tab>
+
+<Tab title="Cursor">
+
+Add to `.cursor/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "inventpay": {
+      "command": "npx",
+      "args": ["-y", "@inventpay/mcp-server"],
+      "env": {
+        "INVENTPAY_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+</Tab>
+
+<Tab title="Windsurf">
+
+Add to your Windsurf MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "inventpay": {
+      "command": "npx",
+      "args": ["-y", "@inventpay/mcp-server"],
+      "env": {
+        "INVENTPAY_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+</Tab>
+
+</Tabs>
+
+## Available Tools
+
+### Payments
+
+| Tool | Description |
+|------|-------------|
+| `create_payment` | Create a crypto payment with a unique wallet address, QR code, and invoice URL |
+| `create_invoice` | Create a multi-currency invoice — customer chooses which crypto to pay with |
+| `get_payment_status` | Check payment status, confirmations, and transaction details |
+
+### Balances
+
+| Tool | Description |
+|------|-------------|
+| `get_balances` | Get all cryptocurrency balances (available, pending, total earned, total withdrawn) |
+
+### Withdrawals
+
+| Tool | Description |
+|------|-------------|
+| `create_withdrawal` | Withdraw funds to an external wallet address |
+| `get_withdrawal` | Check withdrawal status and transaction hash |
+
+### Store Management
+
+| Tool | Description |
+|------|-------------|
+| `create_store` | Create a crypto-powered storefront with a unique URL |
+| `get_store` | Get store details, product count, and order count |
+| `update_store` | Update store name, description, logo, banner, or toggle visibility |
+
+### Products
+
+| Tool | Description |
+|------|-------------|
+| `create_product` | Add a digital product with price, images, and automatic delivery content |
+| `list_products` | List products with search and pagination |
+| `update_product` | Update product details, price, stock, or digital content |
+| `delete_product` | Deactivate a product from your store |
+
+### Orders
+
+| Tool | Description |
+|------|-------------|
+| `list_orders` | List orders with optional status filter and pagination |
+| `get_order` | Get full order details including items, payment, and customer info |
+| `update_order_status` | Update fulfillment status (PROCESSING, SHIPPED, COMPLETED, etc.) |
+
+### Analytics
+
+| Tool | Description |
+|------|-------------|
+| `get_store_analytics` | Get order counts, revenue breakdown by status, and product stats |
+
+## Example Prompts
+
+Once configured, try these prompts with your AI agent:
+
+<AccordionGroup>
+
+<Accordion title="Create a store and add products">
+```
+Create a new store called "Digital Hub" and add these products:
+- "AI Prompt Pack" for $9.99 with a download link to https://example.com/prompts.zip
+- "Logo Templates" for $24.99 with instructions "Download from the link below"
+```
+</Accordion>
+
+<Accordion title="Check payments and balances">
+```
+What's my current balance across all currencies?
+Show me the status of payment cm1pay456.
+```
+</Accordion>
+
+<Accordion title="Manage orders">
+```
+Show me all pending orders in my store.
+What's the total revenue from completed orders?
+```
+</Accordion>
+
+<Accordion title="Create a payment">
+```
+Create a $50 payment in Ethereum for order #12345.
+Generate an invoice for 100 USDT that expires in 2 hours.
+```
+</Accordion>
+
+</AccordionGroup>
+
+## Digital Product Delivery
+
+When you create a product with `digitalContent`, InventPay automatically delivers it to the customer after payment:
+
+```
+Create a product called "Claude Skills Guide" for $19.99 with:
+- Download URL: https://cdn.example.com/guide.pdf
+- File name: Claude-Skills-Guide.pdf
+- Instructions: "Open with any PDF reader"
+```
+
+The AI agent will call `create_product` with the appropriate `digitalContent` fields. After a customer pays, they automatically receive a download link.
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `INVENTPAY_API_KEY` | Yes | — | Your InventPay merchant API key |
+| `INVENTPAY_BASE_URL` | No | `https://api.inventpay.io` | API base URL |
