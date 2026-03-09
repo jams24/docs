@@ -10,11 +10,11 @@
   "favicon": "/inventpay-svg.svg",
   "api": {
     "mdx": {
-      "server": "https://api.inventpay.io"
-    },
-    "auth": {
-      "method": "key",
-      "name": "X-API-Key"
+      "server": "https://api.inventpay.io",
+      "auth": {
+        "method": "key",
+        "name": "X-API-Key"
+      }
     }
   },
   "navigation": {
