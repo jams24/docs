@@ -302,6 +302,7 @@ Analytics:
 - Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
 - Payment expiration: 5-1440 minutes (default 30)
 - Always confirm withdrawal details with the user before executing
+- Withdrawals via API key + withdrawal key do NOT require 2FA — just call the endpoint directly
 - Use create_payment for single-crypto, create_invoice for multi-crypto choice
 - Digital products auto-deliver after payment via digitalContent field
 ```
@@ -372,6 +373,7 @@ Orders:
 - Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
 - Payment expiration: 5-1440 minutes (default 30)
 - Always confirm withdrawal details with the user before executing
+- Withdrawals via API key + X-Withdrawal-Key header do NOT require 2FA — just call the endpoint directly
 - Use /v1/create_payment for single-crypto, /v1/create_invoice for multi-crypto choice
 - Digital products auto-deliver after payment via digitalContent field
 - All responses follow: { success: true/false, data: {...}, message: "..." }
