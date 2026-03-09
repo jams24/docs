@@ -280,6 +280,10 @@ Orders:
 Analytics:
 - get_store_analytics — Revenue breakdown, order counts, product stats
 
+## Important URLs
+- Store public page: https://inventpay.io/store/{slug} (NOT /s/ — always use /store/)
+- Invoice/payment page: https://inventpay.io/invoice/{paymentId}
+
 ## Guidelines
 - All amounts in USD unless specified otherwise
 - Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
@@ -339,6 +343,10 @@ Orders:
 - GET /v1/store/manage/orders — List orders. Query: ?page=1&limit=20&status=PAID
 - GET /v1/store/manage/orders/{orderId} — Get order details
 - PUT /v1/store/manage/orders/{orderId}/status — Update order status. Body: { status } (PROCESSING|SHIPPED|COMPLETED|CANCELLED)
+
+## Important URLs
+- Store public page: https://inventpay.io/store/{slug} (NOT /s/ — always use /store/)
+- Invoice/payment page: https://inventpay.io/invoice/{paymentId}
 
 ## Guidelines
 - All amounts in USD unless specified otherwise
