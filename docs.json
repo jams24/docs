@@ -9,7 +9,9 @@
   },
   "favicon": "/inventpay-svg.svg",
   "api": {
-    "baseUrl": "https://api.inventpay.io",
+    "mdx": {
+      "server": "https://api.inventpay.io"
+    },
     "auth": {
       "method": "key",
       "name": "X-API-Key"
