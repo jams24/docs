@@ -84,12 +84,15 @@
               "api-reference/store/update-store",
               "api-reference/store/create-product",
               "api-reference/store/list-products",
+              "api-reference/store/get-product",
               "api-reference/store/update-product",
               "api-reference/store/delete-product",
+              "api-reference/store/checkout",
+              "api-reference/store/order-status",
+              "api-reference/store/download",
               "api-reference/store/list-orders",
               "api-reference/store/get-order",
               "api-reference/store/update-order-status",
-              "api-reference/store/checkout",
               "api-reference/store/get-public-store"
             ]
           }

@@ -58,6 +58,30 @@ Updates an existing product. Only provided fields are changed. Updating the name
   Custom key-value data
 </ParamField>
 
+<ParamField body="digitalContent" type="object" optional>
+  Digital delivery content — replaces existing digital content
+  <Expandable title="digitalContent properties">
+    <ParamField body="digitalContent.fileUrl" type="string" optional>
+      Download URL for the digital file
+    </ParamField>
+    <ParamField body="digitalContent.fileName" type="string" optional>
+      Display name for the file
+    </ParamField>
+    <ParamField body="digitalContent.fileSize" type="number" optional>
+      File size in bytes
+    </ParamField>
+    <ParamField body="digitalContent.licenseKey" type="string" optional>
+      License or activation key
+    </ParamField>
+    <ParamField body="digitalContent.instructions" type="string" optional>
+      Setup or access instructions
+    </ParamField>
+    <ParamField body="digitalContent.textContent" type="string" optional>
+      Inline text content delivered directly
+    </ParamField>
+  </Expandable>
+</ParamField>
+
 ## Example Request
 
 <CodeGroup>
@@ -67,8 +91,13 @@ curl -X PUT https://api.inventpay.io/v1/store/manage/products/cm1prod123abc \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "price": 39.99,
-    "stock": 50
+    "price": 24.99,
+    "digitalContent": {
+      "fileUrl": "https://cdn.example.com/guide-v3.pdf",
+      "fileName": "Claude-Skills-Guide-v3.pdf",
+      "fileSize": 3072000,
+      "instructions": "Updated! Download the new v3 PDF"
+    }
   }'
 ```
 
@@ -82,8 +111,13 @@ const response = await fetch(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      price: 39.99,
-      stock: 50,
+      price: 24.99,
+      digitalContent: {
+        fileUrl: "https://cdn.example.com/guide-v3.pdf",
+        fileName: "Claude-Skills-Guide-v3.pdf",
+        fileSize: 3072000,
+        instructions: "Updated! Download the new v3 PDF",
+      },
     }),
   }
 );
@@ -97,7 +131,15 @@ import requests
 response = requests.put(
     "https://api.inventpay.io/v1/store/manage/products/cm1prod123abc",
     headers={"X-API-Key": "YOUR_API_KEY"},
-    json={"price": 39.99, "stock": 50}
+    json={
+        "price": 24.99,
+        "digitalContent": {
+            "fileUrl": "https://cdn.example.com/guide-v3.pdf",
+            "fileName": "Claude-Skills-Guide-v3.pdf",
+            "fileSize": 3072000,
+            "instructions": "Updated! Download the new v3 PDF"
+        }
+    }
 )
 
 product = response.json()
@@ -112,10 +154,11 @@ product = response.json()
   "success": true,
   "data": {
     "id": "cm1prod123abc",
-    "name": "Premium API Access",
-    "slug": "premium-api-access",
-    "price": "39.99",
-    "stock": 50,
+    "name": "Claude Skills Guide",
+    "slug": "claude-skills-guide",
+    "price": "24.99",
+    "stock": null,
+    "productType": "DIGITAL",
     "isActive": true,
     "createdAt": "2025-01-15T11:00:00.000Z"
   },

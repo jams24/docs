@@ -1,12 +1,14 @@
 ---
 title: "Create Product"
-description: "Add a product to your store"
+description: "Add a digital product to your store"
 api: "POST /v1/store/manage/products"
 ---
 
 ## Overview
 
 Adds a new product to your store. Products are priced in **USDT** and automatically converted to the customer's chosen cryptocurrency at checkout. A URL slug is generated from the product name.
+
+For digital products, you can attach **digital content** (file URLs, license keys, instructions) that will be automatically delivered to the customer when payment is confirmed.
 
 ## Authentication
 
@@ -44,6 +46,30 @@ Adds a new product to your store. Products are priced in **USDT** and automatica
   Custom key-value data attached to the product
 </ParamField>
 
+<ParamField body="digitalContent" type="object" optional>
+  Digital delivery content — automatically delivered to customer after payment
+  <Expandable title="digitalContent properties">
+    <ParamField body="digitalContent.fileUrl" type="string" optional>
+      Download URL for the digital file **Example:** `"https://cdn.example.com/ebook.pdf"`
+    </ParamField>
+    <ParamField body="digitalContent.fileName" type="string" optional>
+      Display name for the file **Example:** `"Premium-Guide-v2.pdf"`
+    </ParamField>
+    <ParamField body="digitalContent.fileSize" type="number" optional>
+      File size in bytes **Example:** `2048000`
+    </ParamField>
+    <ParamField body="digitalContent.licenseKey" type="string" optional>
+      License or activation key **Example:** `"XXXX-XXXX-XXXX-XXXX"`
+    </ParamField>
+    <ParamField body="digitalContent.instructions" type="string" optional>
+      Setup or access instructions **Example:** `"Download the file and run setup.exe"`
+    </ParamField>
+    <ParamField body="digitalContent.textContent" type="string" optional>
+      Inline text content delivered directly **Example:** `"Your access code is: ABC123"`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
 ## Response
 
 <ResponseField name="success" type="boolean">
@@ -68,6 +94,9 @@ Adds a new product to your store. Products are priced in **USDT** and automatica
     <ResponseField name="stock" type="integer | null">
       Available quantity or `null` for unlimited
     </ResponseField>
+    <ResponseField name="productType" type="string">
+      Product type: `DIGITAL`
+    </ResponseField>
     <ResponseField name="isActive" type="boolean">
       Whether the product is visible
     </ResponseField>
@@ -86,11 +115,16 @@ curl -X POST https://api.inventpay.io/v1/store/manage/products \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Premium API Access",
-    "description": "Unlimited API calls for 30 days",
-    "price": 49.99,
-    "stock": 100,
-    "images": ["https://example.com/product.jpg"]
+    "name": "Claude Skills Guide",
+    "description": "Complete guide to building AI agent skills",
+    "price": 19.99,
+    "images": ["https://example.com/guide-cover.jpg"],
+    "digitalContent": {
+      "fileUrl": "https://cdn.example.com/claude-skills-guide.pdf",
+      "fileName": "Claude-Skills-Guide-v2.pdf",
+      "fileSize": 2048000,
+      "instructions": "Download the PDF and open with any PDF reader"
+    }
   }'
 ```
 
@@ -102,11 +136,16 @@ const response = await fetch("https://api.inventpay.io/v1/store/manage/products"
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    name: "Premium API Access",
-    description: "Unlimited API calls for 30 days",
-    price: 49.99,
-    stock: 100,
-    images: ["https://example.com/product.jpg"],
+    name: "Claude Skills Guide",
+    description: "Complete guide to building AI agent skills",
+    price: 19.99,
+    images: ["https://example.com/guide-cover.jpg"],
+    digitalContent: {
+      fileUrl: "https://cdn.example.com/claude-skills-guide.pdf",
+      fileName: "Claude-Skills-Guide-v2.pdf",
+      fileSize: 2048000,
+      instructions: "Download the PDF and open with any PDF reader",
+    },
   }),
 });
 
@@ -121,11 +160,16 @@ response = requests.post(
     "https://api.inventpay.io/v1/store/manage/products",
     headers={"X-API-Key": "YOUR_API_KEY"},
     json={
-        "name": "Premium API Access",
-        "description": "Unlimited API calls for 30 days",
-        "price": 49.99,
-        "stock": 100,
-        "images": ["https://example.com/product.jpg"]
+        "name": "Claude Skills Guide",
+        "description": "Complete guide to building AI agent skills",
+        "price": 19.99,
+        "images": ["https://example.com/guide-cover.jpg"],
+        "digitalContent": {
+            "fileUrl": "https://cdn.example.com/claude-skills-guide.pdf",
+            "fileName": "Claude-Skills-Guide-v2.pdf",
+            "fileSize": 2048000,
+            "instructions": "Download the PDF and open with any PDF reader"
+        }
     }
 )
 
@@ -143,13 +187,14 @@ print(product["data"]["id"])
   "data": {
     "id": "cm1prod123abc",
     "storeId": "cm1abc2def3ghi",
-    "name": "Premium API Access",
-    "slug": "premium-api-access",
-    "description": "Unlimited API calls for 30 days",
-    "price": "49.99",
-    "images": ["https://example.com/product.jpg"],
-    "stock": 100,
+    "name": "Claude Skills Guide",
+    "slug": "claude-skills-guide",
+    "description": "Complete guide to building AI agent skills",
+    "price": "19.99",
+    "images": ["https://example.com/guide-cover.jpg"],
+    "stock": null,
     "variants": [],
+    "productType": "DIGITAL",
     "isActive": true,
     "sortOrder": 0,
     "metadata": {},
@@ -158,6 +203,10 @@ print(product["data"]["id"])
   "message": "Product created successfully"
 }
 ```
+
+<Tip>
+You can combine multiple content types. For example, a software product might include a `fileUrl` for the download, a `licenseKey` for activation, and `instructions` for setup.
+</Tip>
 
 ## Error Codes
 

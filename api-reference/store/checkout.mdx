@@ -1,12 +1,14 @@
 ---
 title: "Checkout"
-description: "Create an order with crypto payment"
+description: "Create an order with crypto payment and automatic digital delivery"
 api: "POST /v1/store/{slug}/checkout"
 ---
 
 ## Overview
 
 Creates an order and generates a crypto payment address. This is a **public endpoint** — no API key required. The customer sends crypto to the generated address, and the order automatically transitions to `PAID` when payment is confirmed on-chain.
+
+For digital products, the order then automatically transitions to `COMPLETED` with a download token generated for the customer.
 
 **What happens during checkout:**
 
@@ -15,6 +17,14 @@ Creates an order and generates a crypto payment address. This is a **public endp
 3. A unique HD wallet address is generated
 4. Order + Payment are created atomically (stock is decremented)
 5. Returns the payment address, amount, and order details
+
+**After payment is confirmed:**
+
+6. Order status transitions to `PAID`
+7. A unique download token is generated
+8. Order status transitions to `COMPLETED`
+9. Delivery email is sent (if `customerEmail` was provided)
+10. Customer accesses downloads via `/download/{token}`
 
 ## Path Parameters
 
@@ -44,15 +54,11 @@ Creates an order and generates a crypto payment address. This is a **public endp
 </ParamField>
 
 <ParamField body="customerEmail" type="string" optional>
-  Customer's email for order notifications
+  Customer's email for delivery notification. **Recommended** — the delivery email with download link is sent to this address.
 </ParamField>
 
 <ParamField body="customerName" type="string" optional>
   Customer's name (max 100 characters)
-</ParamField>
-
-<ParamField body="shippingAddress" type="object" optional>
-  Shipping address for physical products
 </ParamField>
 
 ## Example Request
@@ -87,6 +93,8 @@ const response = await fetch(
 
 const { data } = await response.json();
 console.log(`Send ${data.payment.amount} ${data.payment.currency} to ${data.payment.address}`);
+// Poll order status to detect when payment confirms
+console.log(`Order number: ${data.order.orderNumber}`);
 ```
 
 ```python Python
@@ -120,7 +128,7 @@ print(f"Send {data['payment']['amount']} {data['payment']['currency']} to {data[
       "currency": "USDT",
       "items": [
         {
-          "name": "Premium API Access",
+          "name": "Claude Skills Guide",
           "quantity": 1,
           "unitPrice": "49.99",
           "totalPrice": "49.99"
@@ -137,6 +145,17 @@ print(f"Send {data['payment']['amount']} {data['payment']['currency']} to {data[
   }
 }
 ```
+
+## After Payment
+
+Once the customer sends crypto and the payment is confirmed on-chain:
+
+1. **Order status** transitions: `PENDING` → `PAID` → `COMPLETED`
+2. **Download token** is generated and attached to the order
+3. **Delivery email** is sent to the customer (if email was provided)
+4. Customer can access downloads at `https://inventpay.io/download/{token}`
+
+Use the [Order Status](/api-reference/store/order-status) endpoint to poll for payment confirmation, or the [Download](/api-reference/store/download) endpoint to retrieve digital content.
 
 ## Error Codes
 

@@ -1,0 +1,127 @@
+---
+title: "Order Status"
+description: "Poll order status and get download token after payment"
+api: "GET /v1/store/order-status/{orderNumber}"
+---
+
+## Overview
+
+Check the current status of an order. This is a **public endpoint** designed for polling — the storefront UI calls this every 10 seconds after checkout to detect when payment is confirmed and digital products are ready for download.
+
+When the order reaches `COMPLETED` or `PAID` status, the response includes the `downloadToken` that the customer can use to access their digital products.
+
+<Info>
+This endpoint is rate-limited to **30 requests per minute** per IP address.
+</Info>
+
+## Path Parameters
+
+<ParamField path="orderNumber" type="string" required>
+  Order number returned from checkout (e.g., `ORD-M1A2B3C-D4E5`)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Order status details
+  <Expandable title="data properties">
+    <ResponseField name="orderNumber" type="string">
+      Order number
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Current order status: `PENDING`, `PAID`, `COMPLETED`, `CANCELLED`, `REFUNDED`
+    </ResponseField>
+    <ResponseField name="downloadToken" type="string | null">
+      64-character hex download token. Only returned when status is `COMPLETED` or `PAID`. Use this with the [Download](/api-reference/store/download) endpoint.
+    </ResponseField>
+    <ResponseField name="deliveredAt" type="string | null">
+      When digital products were delivered (ISO 8601)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.inventpay.io/v1/store/order-status/ORD-M1A2B3C-D4E5
+```
+
+```javascript JavaScript/TypeScript
+// Poll until payment is confirmed
+const pollOrderStatus = async (orderNumber) => {
+  const interval = setInterval(async () => {
+    const response = await fetch(
+      `https://api.inventpay.io/v1/store/order-status/${orderNumber}`
+    );
+    const { data } = await response.json();
+
+    if (data.status === "COMPLETED" && data.downloadToken) {
+      clearInterval(interval);
+      // Redirect customer to download page
+      window.location.href = `/download/${data.downloadToken}`;
+    }
+  }, 10000); // Poll every 10 seconds
+};
+```
+
+```python Python
+import requests
+import time
+
+def wait_for_payment(order_number):
+    while True:
+        response = requests.get(
+            f"https://api.inventpay.io/v1/store/order-status/{order_number}"
+        )
+        data = response.json()["data"]
+
+        if data["status"] == "COMPLETED" and data.get("downloadToken"):
+            print(f"Payment confirmed! Download: /download/{data['downloadToken']}")
+            return data["downloadToken"]
+
+        print(f"Status: {data['status']} - waiting...")
+        time.sleep(10)
+```
+
+</CodeGroup>
+
+## Example Responses
+
+```json 200 - Awaiting Payment
+{
+  "success": true,
+  "data": {
+    "orderNumber": "ORD-M1A2B3C-D4E5",
+    "status": "PENDING",
+    "downloadToken": null,
+    "deliveredAt": null
+  }
+}
+```
+
+```json 200 - Payment Confirmed & Delivered
+{
+  "success": true,
+  "data": {
+    "orderNumber": "ORD-M1A2B3C-D4E5",
+    "status": "COMPLETED",
+    "downloadToken": "a1b2c3d4e5f6...64-char-hex-token",
+    "deliveredAt": "2025-01-15T12:35:00.000Z"
+  }
+}
+```
+
+## Error Codes
+
+| Status Code | Description |
+| ----------- | ----------- |
+| 200 | Order status returned |
+| 404 | Order not found |
+| 429 | Rate limit exceeded (max 30/min per IP) |
+| 500 | Internal server error |
