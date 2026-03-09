@@ -8,6 +8,13 @@
     "dark": "#15803D"
   },
   "favicon": "/inventpay-svg.svg",
+  "api": {
+    "baseUrl": "https://api.inventpay.io",
+    "auth": {
+      "method": "key",
+      "name": "X-API-Key"
+    }
+  },
   "navigation": {
     "tabs": [
       {
