@@ -233,7 +233,16 @@ Copy the prompt below into your agent's system instructions (CLAUDE.md, custom i
   For Claude Code, save this as `CLAUDE.md` in your project root. For Claude Desktop or Cursor, paste it into your custom instructions or system prompt.
 </Tip>
 
-```text Agent Prompt
+There are two ways agents can interact with InventPay:
+
+1. **MCP Server** (recommended) — install the MCP server and tools are available automatically
+2. **Direct API** — call REST endpoints with your API key in the `X-API-Key` header
+
+<Tabs>
+
+<Tab title="For MCP Agents">
+
+```text MCP Agent Prompt
 # InventPay MCP Tools
 
 You have access to InventPay MCP tools for managing crypto payments, stores, and withdrawals.
@@ -279,3 +288,68 @@ Analytics:
 - Use create_payment for single-crypto, create_invoice for multi-crypto choice
 - Digital products auto-deliver after payment via digitalContent field
 ```
+
+</Tab>
+
+<Tab title="For Direct API Agents">
+
+```text Direct API Agent Prompt
+# InventPay API
+
+You can manage crypto payments, stores, and withdrawals via the InventPay REST API.
+
+## Base URL
+https://api.inventpay.io
+
+## Authentication
+Include your API key in every request:
+  Header: X-API-Key: YOUR_API_KEY
+  Content-Type: application/json
+
+For withdrawals, also include:
+  Header: X-Withdrawal-Key: YOUR_WITHDRAWAL_KEY
+
+## API Endpoints
+
+Payments:
+- POST /v1/create_payment — Create a crypto payment. Body: { amount, currency (BTC|ETH|LTC|USDT_ERC20|USDT_BEP20), amountCurrency (USD|USDT), orderId, description, callbackUrl, expirationMinutes }
+- POST /v1/create_invoice — Create a multi-currency invoice. Body: { amount, amountCurrency, orderId, description, expirationMinutes }
+- GET /v1/invoice/{paymentId}/status — Check payment status (no auth required)
+
+Balances:
+- GET /v1/merchant/balance — Get all crypto balances
+- GET /v1/merchant/balance/{currency} — Get balance for specific currency
+
+Withdrawals:
+- POST /v1/merchant/withdrawal/create — Withdraw to external wallet (requires X-Withdrawal-Key header). Body: { amount, currency, destinationAddress, description }
+- GET /v1/withdrawal/{withdrawalId} — Check withdrawal status
+
+Store:
+- POST /v1/store/manage — Create a store. Body: { name, description }
+- GET /v1/store/manage — Get store details
+- PUT /v1/store/manage — Update store. Body: { name, description, logo, banner, isPublished }
+
+Products:
+- POST /v1/store/manage/products — Add product. Body: { name, price, currency, description, stock, images, digitalContent: { fileUrl, fileName, instructions, licenseKey, textContent } }
+- GET /v1/store/manage/products — List products. Query: ?page=1&limit=20&search=term
+- PUT /v1/store/manage/products/{productId} — Update product
+- DELETE /v1/store/manage/products/{productId} — Delete product
+
+Orders:
+- GET /v1/store/manage/orders — List orders. Query: ?page=1&limit=20&status=PAID
+- GET /v1/store/manage/orders/{orderId} — Get order details
+- PUT /v1/store/manage/orders/{orderId}/status — Update order status. Body: { status } (PROCESSING|SHIPPED|COMPLETED|CANCELLED)
+
+## Guidelines
+- All amounts in USD unless specified otherwise
+- Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
+- Payment expiration: 5-1440 minutes (default 30)
+- Always confirm withdrawal details with the user before executing
+- Use /v1/create_payment for single-crypto, /v1/create_invoice for multi-crypto choice
+- Digital products auto-deliver after payment via digitalContent field
+- All responses follow: { success: true/false, data: {...}, message: "..." }
+```
+
+</Tab>
+
+</Tabs>
