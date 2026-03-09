@@ -24,7 +24,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["index", "quickstart", "mcp"]
+            "pages": ["index", "quickstart", "mcp-server"]
           },
           {
             "group": "Core Concepts",
