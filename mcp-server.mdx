@@ -229,9 +229,13 @@ The AI agent will call `create_product` with the appropriate `digitalContent` fi
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `INVENTPAY_API_KEY` | Yes | — | Your InventPay merchant API key |
-| `INVENTPAY_WITHDRAWAL_KEY` | No | — | Withdrawal API key for programmatic withdrawals. Generate from **Dashboard → Settings → Withdrawal API Key**. Without this, `create_withdrawal` will be disabled. |
+| `INVENTPAY_API_KEY` | Yes | — | Your merchant API key (`pk_live_...`). Used for **all API operations**: creating payments/invoices, managing your store, products, orders, checking balances, and reading data. This is your main key for everything except withdrawals. |
+| `INVENTPAY_WITHDRAWAL_KEY` | No | — | Withdrawal-only API key (`wk_live_...`). Used **exclusively** for withdrawing funds to external wallet addresses. This key cannot be used for any other operation. Generate from **Dashboard → Settings → Withdrawal API Key**. Without this, `create_withdrawal` will be disabled. |
 | `INVENTPAY_BASE_URL` | No | `https://api.inventpay.io` | API base URL |
+
+<Warning>
+  **Do not confuse the two keys.** The API key (`INVENTPAY_API_KEY`) handles all endpoint operations — payments, invoices, store management, balances, etc. The withdrawal key (`INVENTPAY_WITHDRAWAL_KEY`) is a separate, restricted key that **only** authorizes sending funds out to external wallets. Both keys are required together when making a withdrawal request.
+</Warning>
 
 ## Agent Instructions
 
@@ -254,6 +258,10 @@ There are two ways agents can interact with InventPay:
 # InventPay MCP Tools
 
 You have access to InventPay MCP tools for managing crypto payments, stores, and withdrawals.
+
+## API Keys
+- INVENTPAY_API_KEY (pk_live_...) — Your main merchant key. Used for ALL operations: creating payments, invoices, managing store/products/orders, checking balances, etc.
+- INVENTPAY_WITHDRAWAL_KEY (wk_live_...) — Withdrawal-only key. Used EXCLUSIVELY for withdrawing funds to external wallet addresses. Cannot be used for anything else. Both keys are required together for withdrawal requests.
 
 ## Available Tools
 
@@ -294,15 +302,25 @@ Analytics:
 - get_store_analytics — Revenue breakdown, order counts, product stats
 
 ## Important URLs
-- Store public page: https://inventpay.io/store/{slug} (NOT /s/ — always use /store/)
+- Store page: https://inventpay.io/store/{slug}
+- Product page: https://inventpay.io/store/{slug}/product/{productSlug} (NOT /store/{slug}/{productSlug} — the /product/ segment is required)
 - Invoice/payment page: https://inventpay.io/invoice/{paymentId}
+- Do NOT omit /product/ from product URLs — /store/{slug}/{productSlug} will NOT work
+
+## Important: Correct Endpoint Paths
+- Payment creation: POST /v1/create_payment (NOT /v1/payments, NOT /v1/invoices)
+- Invoice creation: POST /v1/create_invoice (NOT /v1/invoices, NOT /v1/store/manage/invoices)
+- Store checkout: POST /v1/store/{slug}/checkout (uses the store's URL slug, NOT a store ID)
+- Do NOT guess endpoint paths — use only the exact paths listed above
 
 ## Guidelines
 - All amounts in USD unless specified otherwise
 - Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
 - Payment expiration: 5-1440 minutes (default 30)
 - Always confirm withdrawal details with the user before executing
-- Withdrawals via API key + withdrawal key do NOT require 2FA — just call the endpoint directly
+- Withdrawals require BOTH keys (API key + withdrawal key) and do NOT require 2FA — just call the endpoint directly
+- The withdrawal key (wk_live_...) can ONLY be used for withdrawals — never use it for other operations
+- The API key (pk_live_...) is used for everything else — payments, invoices, store, products, orders, balances
 - Use create_payment for single-crypto, create_invoice for multi-crypto choice
 - Digital products auto-deliver after payment via digitalContent field
 ```
@@ -319,13 +337,22 @@ You can manage crypto payments, stores, and withdrawals via the InventPay REST A
 ## Base URL
 https://api.inventpay.io
 
-## Authentication
-Include your API key in every request:
+## Authentication & API Keys
+There are two separate keys with distinct purposes:
+
+1. API Key (pk_live_...) — Your main merchant key for ALL endpoint operations (payments, invoices, store, products, orders, balances). Include in every request:
   Header: X-API-Key: YOUR_API_KEY
   Content-Type: application/json
 
-For withdrawals, also include:
+2. Withdrawal Key (wk_live_...) — Restricted key used EXCLUSIVELY for withdrawing funds to external wallets. Cannot be used for any other operation. For withdrawal requests, include BOTH keys:
+  Header: X-API-Key: YOUR_API_KEY
   Header: X-Withdrawal-Key: YOUR_WITHDRAWAL_KEY
+
+## IMPORTANT: Correct Endpoint Paths
+- Payment creation is POST /v1/create_payment — NOT /v1/payments
+- Invoice creation is POST /v1/create_invoice — NOT /v1/invoices or /v1/store/manage/invoices
+- Store checkout is POST /v1/store/{slug}/checkout — uses the store URL slug (e.g., "my-store"), NOT a store ID
+- Do NOT guess or invent endpoint paths. Use ONLY the exact paths listed below.
 
 ## API Endpoints
 
@@ -333,6 +360,9 @@ Payments:
 - POST /v1/create_payment — Create a crypto payment. Body: { amount, currency (BTC|ETH|LTC|USDT_ERC20|USDT_BEP20), amountCurrency (USD|USDT), orderId, description, callbackUrl, expirationMinutes }
 - POST /v1/create_invoice — Create a multi-currency invoice. Body: { amount, amountCurrency, orderId, description, expirationMinutes }
 - GET /v1/invoice/{paymentId}/status — Check payment status (no auth required)
+
+Store Checkout (public, no auth):
+- POST /v1/store/{slug}/checkout — Create a store order. Body: { items: [{ productId, quantity, variant }], customerEmail, customerName, currency }
 
 Balances:
 - GET /v1/merchant/balance — Get all crypto balances
@@ -342,7 +372,7 @@ Withdrawals:
 - POST /v1/merchant/withdrawal/create — Withdraw to external wallet (requires X-Withdrawal-Key header). Body: { amount, currency, destinationAddress, description }
 - GET /v1/withdrawal/{withdrawalId} — Check withdrawal status
 
-Store:
+Store Management (auth required):
 - POST /v1/store/manage — Create a store. Body: { name, description }
 - GET /v1/store/manage — Get store details
 - PUT /v1/store/manage — Update store. Body: { name, description, logo, banner, isPublished }
@@ -365,16 +395,21 @@ Orders:
 - PUT /v1/store/manage/orders/{orderId}/status — Update order status. Body: { status } (PROCESSING|SHIPPED|COMPLETED|CANCELLED)
 
 ## Important URLs
-- Store public page: https://inventpay.io/store/{slug} (NOT /s/ — always use /store/)
+- Store page: https://inventpay.io/store/{slug}
+- Product page: https://inventpay.io/store/{slug}/product/{productSlug} (NOT /store/{slug}/{productSlug} — the /product/ segment is required)
 - Invoice/payment page: https://inventpay.io/invoice/{paymentId}
+- Do NOT omit /product/ from product URLs — /store/{slug}/{productSlug} will NOT work
 
 ## Guidelines
 - All amounts in USD unless specified otherwise
 - Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
 - Payment expiration: 5-1440 minutes (default 30)
 - Always confirm withdrawal details with the user before executing
-- Withdrawals via API key + X-Withdrawal-Key header do NOT require 2FA — just call the endpoint directly
+- Withdrawals require BOTH headers (X-API-Key + X-Withdrawal-Key) and do NOT require 2FA — just call the endpoint directly
+- The withdrawal key (wk_live_...) can ONLY be used for withdrawals — never use it for other operations
+- The API key (pk_live_...) is used for everything else — payments, invoices, store, products, orders, balances
 - Use /v1/create_payment for single-crypto, /v1/create_invoice for multi-crypto choice
+- Store checkout uses the store slug in the URL path, NOT a store ID
 - Digital products auto-deliver after payment via digitalContent field
 - All responses follow: { success: true/false, data: {...}, message: "..." }
 ```
