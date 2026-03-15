@@ -46,8 +46,17 @@ For digital products, you can attach **digital content** (file URLs, license key
   Custom key-value data attached to the product
 </ParamField>
 
+<ParamField body="contentType" type="string" optional>
+  Product content type. `GENERAL` (default) for standard digital products, `SKILL` for AI agent skill files. **Example:** `"SKILL"`
+</ParamField>
+
+<ParamField body="skillContent" type="string" optional>
+  Raw SKILL.md file content (markdown with YAML frontmatter). Only used when `contentType` is `SKILL`. The backend automatically parses the YAML frontmatter and stores it as `skillMeta` for storefront display. The raw content is delivered to buyers after payment. Max 100,000 characters.
+  **Example:** `"---\nname: my-skill\nauthor: dev\nversion: 1.0.0\ntags:\n  - automation\n---\n\n# Skill Instructions\n..."`
+</ParamField>
+
 <ParamField body="digitalContent" type="object" optional>
-  Digital delivery content — automatically delivered to customer after payment
+  Digital delivery content — automatically delivered to customer after payment. Can be used alongside `skillContent` for skill products (e.g., add a download URL or setup instructions).
   <Expandable title="digitalContent properties">
     <ParamField body="digitalContent.fileUrl" type="string" optional>
       Download URL for the digital file **Example:** `"https://cdn.example.com/ebook.pdf"`
@@ -96,6 +105,12 @@ For digital products, you can attach **digital content** (file URLs, license key
     </ResponseField>
     <ResponseField name="productType" type="string">
       Product type: `DIGITAL`
+    </ResponseField>
+    <ResponseField name="contentType" type="string">
+      Content type: `GENERAL` or `SKILL`
+    </ResponseField>
+    <ResponseField name="skillMeta" type="object | null">
+      Parsed YAML frontmatter from `skillContent` (only for SKILL products). Contains `name`, `description`, `author`, `version`, `tags`, etc.
     </ResponseField>
     <ResponseField name="isActive" type="boolean">
       Whether the product is visible
@@ -207,6 +222,73 @@ print(product["data"]["id"])
 <Tip>
 You can combine multiple content types. For example, a software product might include a `fileUrl` for the download, a `licenseKey` for activation, and `instructions` for setup.
 </Tip>
+
+### Skill Product Example
+
+To sell an AI agent skill file, set `contentType` to `SKILL` and provide the raw SKILL.md content in `skillContent`:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.inventpay.io/v1/store/manage/products \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Code Review Pro Skill",
+    "description": "AI skill that catches security vulnerabilities",
+    "price": 8.99,
+    "contentType": "SKILL",
+    "skillContent": "---\nname: code-review-pro\nauthor: devtools\nversion: 2.0.0\ntags:\n  - security\n  - code-review\n---\n\n# Code Review Pro\n\nInstructions for the agent..."
+  }'
+```
+
+```javascript JavaScript/TypeScript
+const response = await fetch("https://api.inventpay.io/v1/store/manage/products", {
+  method: "POST",
+  headers: {
+    "X-API-Key": "YOUR_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "Code Review Pro Skill",
+    description: "AI skill that catches security vulnerabilities",
+    price: 8.99,
+    contentType: "SKILL",
+    skillContent: `---
+name: code-review-pro
+author: devtools
+version: 2.0.0
+tags:
+  - security
+  - code-review
+---
+
+# Code Review Pro
+
+Instructions for the agent...`,
+  }),
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "https://api.inventpay.io/v1/store/manage/products",
+    headers={"X-API-Key": "YOUR_API_KEY"},
+    json={
+        "name": "Code Review Pro Skill",
+        "description": "AI skill that catches security vulnerabilities",
+        "price": 8.99,
+        "contentType": "SKILL",
+        "skillContent": "---\nname: code-review-pro\nauthor: devtools\nversion: 2.0.0\ntags:\n  - security\n  - code-review\n---\n\n# Code Review Pro\n\nInstructions for the agent..."
+    }
+)
+```
+
+</CodeGroup>
+
+The backend automatically parses the YAML frontmatter and the storefront displays the skill metadata (name, version, author, tags) as a rich product card with a purple "SKILL" badge. The raw `skillContent` is never exposed publicly — it is delivered to the buyer after payment.
 
 ## Error Codes
 

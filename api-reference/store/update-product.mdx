@@ -58,6 +58,14 @@ Updates an existing product. Only provided fields are changed. Updating the name
   Custom key-value data
 </ParamField>
 
+<ParamField body="contentType" type="string" optional>
+  Product content type: `GENERAL` or `SKILL`. Switching from `SKILL` to `GENERAL` clears `skillContent` and `skillMeta`.
+</ParamField>
+
+<ParamField body="skillContent" type="string" optional>
+  Raw SKILL.md file content (markdown with YAML frontmatter). Only used when `contentType` is `SKILL`. The backend re-parses frontmatter automatically on update. Max 100,000 characters.
+</ParamField>
+
 <ParamField body="digitalContent" type="object" optional>
   Digital delivery content — replaces existing digital content
   <Expandable title="digitalContent properties">

@@ -51,7 +51,9 @@ Products are digital items listed in your store. Each product has:
 | `stock` | Available quantity (`null` = unlimited) |
 | `variants` | Optional variant options |
 | `isActive` | Whether the product is visible to customers |
+| `contentType` | Product content type: `GENERAL` (default) or `SKILL` |
 | `digitalContent` | Digital delivery content (file URL, license key, instructions, etc.) |
+| `skillContent` | Raw SKILL.md content (only for `SKILL` content type) |
 
 Products have a **slug** auto-generated from the name, unique within the store. Each product gets its own shareable URL:
 
@@ -62,6 +64,40 @@ https://inventpay.io/store/your-store/product/product-slug
 <Tip>
 Products without images automatically receive a branded gradient avatar generated from the product name.
 </Tip>
+
+### Skill Products
+
+Products with `contentType: "SKILL"` are designed for selling **AI agent skill files** (SKILL.md). When you set `contentType` to `SKILL` and provide `skillContent` (the raw markdown with YAML frontmatter), the backend automatically parses the frontmatter and extracts metadata.
+
+**Parsed metadata (`skillMeta`) includes:**
+- `name` — Skill name
+- `description` — What the skill does
+- `author` — Who created it
+- `version` — Semantic version (e.g., `1.0.0`)
+- `tags` — Array of tags (e.g., `["automation", "productivity"]`)
+- `model` — Target model or platform
+- `category`, `license`, `homepage`, `source`
+
+The storefront displays this metadata as rich product cards with skill badges, version numbers, author names, and tags — giving buyers clear information about what they're purchasing.
+
+<Info>
+The raw `skillContent` (the actual SKILL.md file) is **never exposed publicly** on the storefront. Only the parsed `skillMeta` is shown. The full content is delivered to the buyer after payment, just like any other digital product.
+</Info>
+
+**Example skill product creation:**
+
+```bash
+curl -X POST https://api.inventpay.io/v1/store/manage/products \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Advanced Code Review Skill",
+    "description": "AI skill that catches security vulnerabilities and suggests fixes",
+    "price": 8.99,
+    "contentType": "SKILL",
+    "skillContent": "---\nname: code-review-pro\nauthor: devtools\nversion: 2.0.0\ntags:\n  - security\n  - code-review\n---\n\n# Code Review Pro\n\nYour skill instructions here..."
+  }'
+```
 
 ### Digital Delivery
 
