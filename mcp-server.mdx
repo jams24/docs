@@ -22,11 +22,12 @@ npm install -g inventpay-mcp
 
 ## Setup
 
-### 1. Get your API Key
+### 1. Get your API Keys
 
 1. Sign up at [inventpay.io](https://inventpay.io)
 2. Go to **Dashboard → Settings**
-3. Copy your API key
+3. Copy your **API key** (`pk_live_...`) — this is your main key for all operations
+4. *(Optional)* Generate a **Withdrawal API key** (`wk_live_...`) under **Withdrawal API Key** — only needed if you want the AI agent to withdraw funds to external wallets
 
 ### 2. Configure your AI tool
 
@@ -46,12 +47,17 @@ Add to your `claude_desktop_config.json`:
       "command": "npx",
       "args": ["-y", "inventpay-mcp"],
       "env": {
-        "INVENTPAY_API_KEY": "your-api-key-here"
+        "INVENTPAY_API_KEY": "your-api-key-here",
+        "INVENTPAY_WITHDRAWAL_KEY": "your-withdrawal-key-here"
       }
     }
   }
 }
 ```
+
+<Note>
+  `INVENTPAY_WITHDRAWAL_KEY` is optional. Without it, all tools work except `create_withdrawal`. Only add it if you want your AI agent to be able to send funds to external wallets.
+</Note>
 
 Restart Claude Desktop after saving.
 
@@ -63,10 +69,11 @@ Restart Claude Desktop after saving.
 claude mcp add inventpay -- npx -y inventpay-mcp
 ```
 
-Set the environment variable in your shell:
+Set the environment variables in your shell:
 
 ```bash
 export INVENTPAY_API_KEY="your-api-key-here"
+export INVENTPAY_WITHDRAWAL_KEY="your-withdrawal-key-here"  # Optional — only for withdrawals
 ```
 
 </Tab>
@@ -82,12 +89,17 @@ Add to `.cursor/mcp.json` in your project root:
       "command": "npx",
       "args": ["-y", "inventpay-mcp"],
       "env": {
-        "INVENTPAY_API_KEY": "your-api-key-here"
+        "INVENTPAY_API_KEY": "your-api-key-here",
+        "INVENTPAY_WITHDRAWAL_KEY": "your-withdrawal-key-here"
       }
     }
   }
 }
 ```
+
+<Note>
+  `INVENTPAY_WITHDRAWAL_KEY` is optional. Without it, all tools work except `create_withdrawal`. Only add it if you want your AI agent to be able to send funds to external wallets.
+</Note>
 
 </Tab>
 
@@ -102,12 +114,17 @@ Add to your Windsurf MCP configuration:
       "command": "npx",
       "args": ["-y", "inventpay-mcp"],
       "env": {
-        "INVENTPAY_API_KEY": "your-api-key-here"
+        "INVENTPAY_API_KEY": "your-api-key-here",
+        "INVENTPAY_WITHDRAWAL_KEY": "your-withdrawal-key-here"
       }
     }
   }
 }
 ```
+
+<Note>
+  `INVENTPAY_WITHDRAWAL_KEY` is optional. Without it, all tools work except `create_withdrawal`. Only add it if you want your AI agent to be able to send funds to external wallets.
+</Note>
 
 </Tab>
 
