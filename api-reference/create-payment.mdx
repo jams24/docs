@@ -24,12 +24,12 @@ Use this endpoint when you want the customer to pay in a specific cryptocurrency
 
 <ParamField body="amountCurrency" type="string" required>
   The currency of the amount field **Options:** `USD`, `USDT`, `BTC`, `ETH`,
-  `LTC` **Example:** `"USD"`
+  `LTC`, `SOL` **Example:** `"USD"`
 </ParamField>
 
 <ParamField body="currency" type="string" required>
   The cryptocurrency the customer will pay with **Options:** `BTC`, `ETH`,
-  `LTC`, `USDT_ERC20`, `USDT_BEP20` **Example:** `"USDT_BEP20"`
+  `LTC`, `USDT_ERC20`, `USDT_BEP20`, `SOL`, `USDC_SOL`, `USDC_BEP20` **Example:** `"USDT_BEP20"`
 </ParamField>
 
 <ParamField body="orderId" type="string" optional>
@@ -193,7 +193,7 @@ print(payment.data)
   "success": false,
   "error": "Validation failed",
   "details": {
-    "currency": "Invalid currency. Must be one of: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20"
+    "currency": "Invalid currency. Must be one of: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20, SOL, USDC_SOL, USDC_BEP20"
   },
   "statusCode": 400
 }

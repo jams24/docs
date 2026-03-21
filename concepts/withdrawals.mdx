@@ -201,6 +201,9 @@ Each cryptocurrency has a minimum withdrawal amount:
 | LTC        | 0.1 LTC (~$7)      | Network fee efficiency |
 | USDT_ERC20 | 10 USDT            | Gas fee efficiency     |
 | USDT_BEP20 | 10 USDT            | Processing efficiency  |
+| SOL        | 0.1 SOL (~$15)     | Network fee efficiency |
+| USDC_SOL   | 5 USDC             | Processing efficiency  |
+| USDC_BEP20 | 5 USDC             | Processing efficiency  |
 
 <Warning>
   Attempting to withdraw less than the minimum will result in an error. Network
@@ -215,6 +218,8 @@ Each cryptocurrency has a minimum withdrawal amount:
 - ETH: 50 ETH
 - LTC: 500 LTC
 - USDT: 10,000 USDT
+- SOL: 500 SOL
+- USDC: 10,000 USDC
 
 **Monthly Limits:**
 
@@ -222,6 +227,8 @@ Each cryptocurrency has a minimum withdrawal amount:
 - ETH: 500 ETH
 - LTC: 5,000 LTC
 - USDT: 100,000 USDT
+- SOL: 5,000 SOL
+- USDC: 100,000 USDC
 
 <Info>
   Limits reset automatically. Daily limits reset every 24 hours, monthly limits
@@ -278,6 +285,9 @@ All withdrawals include two types of fees:
 | LTC        | 0.5%        | ~0.001 LTC          | ~0.006 LTC               |
 | USDT_ERC20 | 0.5%        | ~$2-10              | ~$2.50-10.50             |
 | USDT_BEP20 | 0.5%        | ~$0.10-0.50         | ~$0.60-1.00              |
+| SOL        | 0.5%        | ~$0.001-0.01        | ~$0.50                   |
+| USDC_SOL   | 0.5%        | ~$0.001-0.01        | ~$0.50                   |
+| USDC_BEP20 | 0.5%        | ~$0.10-0.50         | ~$0.60-1.00              |
 
 <Note>
   Network fees vary based on blockchain congestion. Fees shown are estimates and
@@ -311,6 +321,9 @@ Withdrawal processing times vary by cryptocurrency:
 | Litecoin (LTC) | 10-30 minutes   | 6 blocks               |
 | USDT (ERC-20)  | 10-30 minutes   | 12 blocks              |
 | USDT (BEP-20)  | 5-15 minutes    | 15 blocks              |
+| Solana (SOL)   | 1-2 minutes     | Finalized              |
+| USDC (Solana)  | 1-2 minutes     | Finalized              |
+| USDC (BEP-20)  | 5-15 minutes    | 15 blocks              |
 
 <Tip>
   **USDT_BEP20 is fastest:** If speed is important, consider using USDT on
@@ -423,6 +436,7 @@ Once processing, you can track your withdrawal on blockchain explorers:
 | Ethereum | `https://etherscan.io/tx/{hash}`                     |
 | BSC      | `https://bscscan.com/tx/{hash}`                      |
 | Litecoin | `https://blockchair.com/litecoin/transaction/{hash}` |
+| Solana   | `https://solscan.io/tx/{hash}`                       |
 
 <Card
   title="Get Withdrawal API"

@@ -110,7 +110,7 @@ Create a payment for a specific cryptocurrency (customer must pay in that curren
 const payment = await sdk.createPayment({
   amount: 29.99,
   amountCurrency: "USD",
-  currency: "USDT_BEP20", // or BTC, ETH, LTC, USDT_ERC20
+  currency: "USDT_BEP20", // or BTC, ETH, LTC, USDT_ERC20, SOL, USDC_SOL, USDC_BEP20
   orderId: "order-12345",
   description: "Premium Plan Subscription",
   expirationMinutes: 30, // Optional: payment expires in 30 minutes
@@ -162,7 +162,7 @@ const invoice = await sdk.createInvoice({
 console.log("Invoice URL:", invoice.data.invoiceUrl);
 console.log("Payment ID:", invoice.data.paymentId);
 console.log("Available currencies:", Object.keys(invoice.data.conversionRates));
-// Output: ['BTC', 'ETH', 'LTC', 'USDT_ERC20', 'USDT_BEP20']
+// Output: ['BTC', 'ETH', 'LTC', 'USDT_ERC20', 'USDT_BEP20', 'SOL', 'USDC_SOL', 'USDC_BEP20']
 ```
 
 ```python Python
@@ -302,6 +302,9 @@ InventPay supports the following cryptocurrencies:
 | Litecoin | Litecoin          | `LTC`        | Native Litecoin network     |
 | Tether   | Ethereum (ERC-20) | `USDT_ERC20` | USDT on Ethereum            |
 | Tether   | BSC (BEP-20)      | `USDT_BEP20` | USDT on Binance Smart Chain |
+| Solana   | Solana            | `SOL`        | Native Solana network       |
+| USDC     | Solana            | `USDC_SOL`   | USDC on Solana              |
+| USDC     | BSC (BEP-20)      | `USDC_BEP20` | USDC on Binance Smart Chain |
 
 ## Complete Example
 

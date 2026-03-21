@@ -69,7 +69,7 @@ A **Multi-Currency Invoice** lets customers choose which cryptocurrency they wan
 **Result:**
 
 - Invoice URL with currency selector
-- Conversion rates for: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20
+- Conversion rates for: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20, SOL, USDC_SOL, USDC_BEP20
 - Customer selects their preferred cryptocurrency
 - Unique address generated after selection
 
@@ -274,6 +274,9 @@ Different cryptocurrencies require different confirmation counts before payment 
 | Litecoin (LTC) | 6 confirmations        | ~15 minutes  |
 | USDT (ERC-20)  | 12 confirmations       | ~3 minutes   |
 | USDT (BEP-20)  | 15 confirmations       | ~45 seconds  |
+| Solana (SOL)   | Finalized              | ~12 seconds  |
+| USDC (Solana)  | Finalized              | ~12 seconds  |
+| USDC (BEP-20)  | 15 confirmations       | ~45 seconds  |
 
 <Tip>
   Times are estimates. Network congestion and gas prices can affect actual
@@ -308,7 +311,7 @@ Different cryptocurrencies require different confirmation counts before payment 
 
   <Accordion title="Display Clear Instructions" icon="info-circle">
     - Show exact amount to send
-    - Display correct network (ERC-20 vs BEP-20)
+    - Display correct network (ERC-20, BEP-20, or Solana)
     - Include expiration timer
     - Provide QR code for mobile wallets
   </Accordion>

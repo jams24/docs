@@ -5,7 +5,7 @@ description: "Supported cryptocurrencies and networks in InventPay"
 
 ## Supported Cryptocurrencies
 
-InventPay supports five major cryptocurrencies across multiple blockchain networks, giving you and your customers flexibility in payment options.
+InventPay supports eight major cryptocurrencies across multiple blockchain networks, giving you and your customers flexibility in payment options.
 
 ## Available Currencies
 
@@ -40,12 +40,42 @@ InventPay supports five major cryptocurrencies across multiple blockchain networ
 
   <Card title="USDT (BEP-20)" icon="dollar-sign">
     **Network:** Binance Smart Chain
-    
+
     **Code:** `USDT_BEP20`
-    
+
     **Confirmations:** 15 blocks (~45 sec)
-    
+
     **Min Amount:** 10 USDT
+  </Card>
+
+  <Card title="Solana (SOL)" icon="bolt">
+    **Network:** Solana Mainnet
+
+    **Code:** `SOL`
+
+    **Confirmations:** Finalized (~12 sec)
+
+    **Min Amount:** 0.1 SOL
+  </Card>
+
+  <Card title="USDC (Solana)" icon="dollar-sign">
+    **Network:** Solana (SPL Token)
+
+    **Code:** `USDC_SOL`
+
+    **Confirmations:** Finalized (~12 sec)
+
+    **Min Amount:** 5 USDC
+  </Card>
+
+  <Card title="USDC (BEP-20)" icon="dollar-sign">
+    **Network:** Binance Smart Chain
+
+    **Code:** `USDC_BEP20`
+
+    **Confirmations:** 15 blocks (~45 sec)
+
+    **Min Amount:** 5 USDC
   </Card>
 </CardGroup>
 
@@ -60,6 +90,9 @@ When creating payments or invoices, use these exact currency codes:
 | Litecoin        | `LTC`        | Litecoin Mainnet    |
 | Tether (ERC-20) | `USDT_ERC20` | Ethereum            |
 | Tether (BEP-20) | `USDT_BEP20` | Binance Smart Chain |
+| Solana           | `SOL`        | Solana Mainnet      |
+| USDC (Solana)    | `USDC_SOL`   | Solana              |
+| USDC (BEP-20)    | `USDC_BEP20` | Binance Smart Chain |
 
 <Warning>
   Always use the exact code as shown. Currency codes are case-sensitive.
@@ -113,17 +146,65 @@ USDT (Tether) is available on multiple blockchain networks. InventPay supports t
   confirmations. However, always consider your customers' wallet capabilities.
 </Tip>
 
+## Understanding Solana & USDC
+
+### Solana (SOL)
+
+Solana is a high-performance blockchain known for extremely fast finality and low transaction costs.
+
+**Advantages:**
+
+- Ultra-fast finality (~12 seconds)
+- Extremely low fees (fractions of a cent)
+- Growing DeFi and NFT ecosystem
+- High throughput (thousands of TPS)
+
+**Considerations:**
+
+- Requires a Solana-compatible wallet (Phantom, Solflare, etc.)
+- Newer ecosystem compared to Ethereum
+
+**Best for:**
+
+- High-frequency, low-value transactions
+- Applications targeting the Solana ecosystem
+- Users who want near-instant confirmations
+
+### USDC on Solana vs BEP-20
+
+USDC is available on multiple networks. InventPay supports two:
+
+**USDC_SOL (Solana):**
+
+- Fastest confirmations (~12 seconds finalized)
+- Lowest fees (fractions of a cent)
+- Growing adoption in DeFi
+- Requires Solana wallet
+
+**USDC_BEP20 (Binance Smart Chain):**
+
+- Fast confirmations (~45 seconds)
+- Low fees ($0.10-0.50)
+- BSC ecosystem compatibility
+- Requires BSC-compatible wallet
+
+<Tip>
+  **USDC_SOL** offers the fastest and cheapest USDC transfers. Choose it when your
+  customers use Solana wallets. Use **USDC_BEP20** for BSC ecosystem users.
+</Tip>
+
 ## Network Selection Guide
 
 Choosing the right network is crucial for your customers' experience:
 
 <AccordionGroup>
   <Accordion title="For E-commerce" icon="cart-shopping">
-    **Recommended:** `USDT_BEP20` or create multi-currency invoices
-    
+    **Recommended:** `USDT_BEP20`, `USDC_SOL`, or create multi-currency invoices
+
     - Lower fees encourage completion
     - Fast confirmations improve UX
     - Stable value (pegged to USD)
+    - SOL/USDC_SOL offers near-instant finality
   </Accordion>
 
 {" "}
@@ -160,6 +241,7 @@ When specifying amounts in API requests, you can denominate in different currenc
 | Bitcoin   | `BTC`  | BTC-denominated pricing   |
 | Ethereum  | `ETH`  | ETH-denominated pricing   |
 | Litecoin  | `LTC`  | LTC-denominated pricing   |
+| Solana    | `SOL`  | SOL-denominated pricing   |
 
 ### Example: USD-based Pricing
 
@@ -224,6 +306,9 @@ Each cryptocurrency has minimum payment amounts to ensure economic viability:
 | LTC        | 0.1 LTC (~$7)    | Network fee considerations |
 | USDT_ERC20 | 10 USDT          | Gas fee considerations     |
 | USDT_BEP20 | 10 USDT          | Processing efficiency      |
+| SOL        | 0.1 SOL (~$15)   | Network fee considerations |
+| USDC_SOL   | 5 USDC           | Processing efficiency      |
+| USDC_BEP20 | 5 USDC           | Processing efficiency      |
 
 <Warning>
   Payments below minimum amounts will be rejected at creation. Always validate
@@ -243,6 +328,9 @@ Understanding network fees helps you choose the right cryptocurrency:
 | LTC        | $0.01-0.10  | Low and stable            |
 | USDT_ERC20 | $1-20       | Variable (gas price)      |
 | USDT_BEP20 | $0.10-0.50  | Low and stable            |
+| SOL        | $0.001-0.01 | Ultra-low and stable      |
+| USDC_SOL   | $0.001-0.01 | Ultra-low and stable      |
+| USDC_BEP20 | $0.10-0.50  | Low and stable            |
 
 <Tip>
   **Customer pays network fees** when sending payment. **You pay network fees**
@@ -263,11 +351,17 @@ graph LR
     B -->|LTC| E[6 blocks ≈ 15 min]
     B -->|USDT ERC20| F[12 blocks ≈ 3 min]
     B -->|USDT BEP20| G[15 blocks ≈ 45 sec]
+    B -->|SOL| I[Finalized ≈ 12 sec]
+    B -->|USDC SOL| J[Finalized ≈ 12 sec]
+    B -->|USDC BEP20| K[15 blocks ≈ 45 sec]
     C --> H[COMPLETED]
     D --> H
     E --> H
     F --> H
     G --> H
+    I --> H
+    J --> H
+    K --> H
 ```
 
 ### Why Different Confirmation Counts?
@@ -305,18 +399,26 @@ ltc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfhx0wlh
 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
 ```
 
+```text Solana (SOL) / USDC (Solana)
+7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV
+```
+
+```text USDC (BEP-20)
+0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+```
+
 </CodeGroup>
 
 <Warning>
-  **CRITICAL:** USDT_ERC20 and USDT_BEP20 use similar address formats but are on
-  different networks. Sending to the wrong network will result in loss of funds!
+  **CRITICAL:** USDT_ERC20, USDT_BEP20, and USDC_BEP20 use similar address formats (0x...) but are on
+  different networks. Solana addresses are completely different (Base58 format). Sending to the wrong network will result in loss of funds!
 </Warning>
 
 ## Best Practices
 
 <Steps>
   <Step title="Always Specify Network">
-    When accepting USDT, clearly communicate which network (ERC-20 or BEP-20)
+    When accepting USDT or USDC, clearly communicate which network (ERC-20, BEP-20, or Solana)
   </Step>
   <Step title="Consider Your Audience">
     Choose currencies your customers are likely to have
@@ -327,8 +429,8 @@ ltc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfhx0wlh
   <Step title="Use Multi-Currency for Consumers">
     Let customers choose their preferred cryptocurrency
   </Step>
-  <Step title="Test Both Networks">
-    Test USDT on both ERC-20 and BEP-20 before going live
+  <Step title="Test All Networks">
+    Test USDT, USDC, and SOL on all supported networks before going live
   </Step>
 </Steps>
 
@@ -339,8 +441,8 @@ We're constantly adding support for more cryptocurrencies:
 ### Coming Soon
 
 - Polygon (MATIC)
-- USDC (ERC-20 and BEP-20)
-- Solana (SOL)
+- USDC (ERC-20)
+- USDT (Solana / SPL)
 
 ### Under Consideration
 

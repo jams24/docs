@@ -20,7 +20,7 @@ Use this endpoint when you only need balance information for one cryptocurrency.
 
 <ParamField path="currency" type="string" required>
   The cryptocurrency to get balance for **Options:** `BTC`, `ETH`, `LTC`,
-  `USDT_ERC20`, `USDT_BEP20` **Example:** `"USDT_BEP20"`
+  `USDT_ERC20`, `USDT_BEP20`, `SOL`, `USDC_SOL`, `USDC_BEP20` **Example:** `"USDT_BEP20"`
 </ParamField>
 
 ## Response
@@ -175,7 +175,7 @@ print(f"Daily Limit: {balance.data['balance']['limits']['daily']['remaining']}")
   "success": false,
   "error": "Invalid currency",
   "details": {
-    "currency": "Must be one of: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20"
+    "currency": "Must be one of: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20, SOL, USDC_SOL, USDC_BEP20"
   },
   "statusCode": 400
 }

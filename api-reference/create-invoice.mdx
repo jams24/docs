@@ -23,7 +23,7 @@ Use this endpoint when you want to give customers flexibility in choosing their 
 </ParamField>
 
 <ParamField body="amountCurrency" type="string" required>
-  The currency of the amount field **Options:** `USD`, `USDT` **Example:**
+  The currency of the amount field **Options:** `USD`, `USDT`, `BTC`, `ETH`, `LTC`, `SOL` **Example:**
   `"USD"`
 </ParamField>
 
@@ -89,6 +89,18 @@ Use this endpoint when you want to give customers flexibility in choosing their 
         </ResponseField>
 
         <ResponseField name="USDT_BEP20" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="SOL" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="USDC_SOL" type="object">
+          Similar structure to BTC
+        </ResponseField>
+
+        <ResponseField name="USDC_BEP20" type="object">
           Similar structure to BTC
         </ResponseField>
       </Expandable>
@@ -196,6 +208,18 @@ print(invoice.data)
         "price": 1
       },
       "USDT_BEP20": {
+        "cryptoAmount": 49.99,
+        "price": 1
+      },
+      "SOL": {
+        "cryptoAmount": 0.35,
+        "price": 143
+      },
+      "USDC_SOL": {
+        "cryptoAmount": 49.99,
+        "price": 1
+      },
+      "USDC_BEP20": {
         "cryptoAmount": 49.99,
         "price": 1
       }
