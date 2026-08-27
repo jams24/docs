@@ -1,0 +1,146 @@
+---
+title: "Get Supported Currencies"
+description: "List the cryptocurrencies this deployment accepts, with their networks and settlement rules"
+api: "GET /v1/currencies"
+---
+
+## Overview
+
+Returns the cryptocurrencies InventPay will actually accept, along with the
+metadata a client needs to render them: network, display precision, and how many
+confirmations each takes to settle.
+
+Prefer this over hardcoding a currency list. Most currencies are always
+available, but **XMR is conditional** — it requires a Monero wallet on the API
+side, so a hardcoded list can offer a currency the API then rejects.
+
+<Note>
+  This endpoint is **public**. No API key is required, which means you can call
+  it from a checkout page before the customer authenticates.
+</Note>
+
+## Authentication
+
+None.
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="currencies" type="array">
+  One entry per accepted currency
+  <Expandable title="currency properties">
+    <ResponseField name="code" type="string">
+      The code to pass as `currency` when creating a payment or withdrawal
+      **Example:** `"XMR"`
+    </ResponseField>
+
+    <ResponseField name="name" type="string">
+      Human-readable name **Example:** `"Monero"`
+    </ResponseField>
+
+    <ResponseField name="symbol" type="string">
+      Currency symbol for display **Example:** `"ɱ"`
+    </ResponseField>
+
+    <ResponseField name="network" type="string">
+      The blockchain network **Example:** `"Monero"`
+    </ResponseField>
+
+    <ResponseField name="decimals" type="integer">
+      The chain's native precision. XMR is `12` (piconero), ETH is `18`, BTC is
+      `8`. Store amounts at this precision.
+    </ResponseField>
+
+    <ResponseField name="displayDecimals" type="integer">
+      What a user interface should actually render. Always less than or equal to
+      `decimals` — nobody wants twelve decimal places on a receipt.
+    </ResponseField>
+
+    <ResponseField name="minConfirmations" type="integer">
+      Confirmations before the payment settles. For XMR this is a **consensus
+      rule** (10) rather than a risk setting and cannot be shortened.
+    </ResponseField>
+
+    <ResponseField name="isStablecoin" type="boolean">
+      Whether the currency is pegged to USD and therefore needs no price
+      conversion
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.inventpay.io/v1/currencies
+```
+
+```javascript SDK
+import { PaymentSDK } from "inventpay";
+
+const sdk = new PaymentSDK({ apiKey: "pk_live_..." });
+const { currencies } = await sdk.getSupportedCurrencies();
+
+const acceptsMonero = currencies.some((c) => c.code === "XMR");
+```
+
+```python SDK
+from inventpay import PaymentSDK, SDKConfig
+
+sdk = PaymentSDK(SDKConfig(api_key="pk_live_..."))
+res = sdk.get_supported_currencies()
+
+accepts_monero = any(c.code == "XMR" for c in res.currencies)
+```
+
+</CodeGroup>
+
+## Response Example
+
+```json
+{
+  "success": true,
+  "currencies": [
+    {
+      "code": "BTC",
+      "name": "Bitcoin",
+      "symbol": "₿",
+      "network": "Bitcoin",
+      "decimals": 8,
+      "displayDecimals": 8,
+      "minConfirmations": 1,
+      "isStablecoin": false
+    },
+    {
+      "code": "XMR",
+      "name": "Monero",
+      "symbol": "ɱ",
+      "network": "Monero",
+      "decimals": 12,
+      "displayDecimals": 6,
+      "minConfirmations": 10,
+      "isStablecoin": false
+    }
+  ]
+}
+```
+
+<Tip>
+  The response is cacheable for five minutes. Fetch it once when your checkout
+  loads rather than per payment.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Currencies" icon="coins" href="/concepts/currencies">
+    Networks, fees, minimums and confirmation rules
+  </Card>
+  <Card title="Create Payment" icon="money-bill" href="/api-reference/create-payment">
+    Use a currency code from this endpoint
+  </Card>
+</CardGroup>

@@ -24,7 +24,11 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["index", "quickstart", "mcp-server"]
+            "pages": [
+              "index",
+              "quickstart",
+              "mcp-server"
+            ]
           },
           {
             "group": "Core Concepts",
@@ -52,7 +56,10 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["api-reference/introduction"]
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/get-currencies"
+            ]
           },
           {
             "group": "Payments",
@@ -107,7 +114,9 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["sdks/overview"]
+            "pages": [
+              "sdks/overview"
+            ]
           },
           {
             "group": "JavaScript/TypeScript",

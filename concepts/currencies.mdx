@@ -5,7 +5,7 @@ description: "Supported cryptocurrencies and networks in InventPay"
 
 ## Supported Cryptocurrencies
 
-InventPay supports eight major cryptocurrencies across multiple blockchain networks, giving you and your customers flexibility in payment options.
+InventPay supports nine major cryptocurrencies across multiple blockchain networks, giving you and your customers flexibility in payment options.
 
 ## Available Currencies
 
@@ -77,7 +77,24 @@ InventPay supports eight major cryptocurrencies across multiple blockchain netwo
 
     **Min Amount:** 5 USDC
   </Card>
+
+  <Card title="Monero (XMR)" icon="user-secret">
+    **Network:** Monero Mainnet
+
+    **Code:** `XMR`
+
+    **Confirmations:** 10 blocks (~20 min, fixed)
+
+    **Min Amount:** 0.01 XMR
+  </Card>
 </CardGroup>
+
+<Note>
+  **Monero availability is per-deployment.** Unlike the other currencies, XMR
+  requires a Monero wallet on the API side. Call
+  [`GET /v1/currencies`](/api-reference/get-currencies) to see what your
+  account actually accepts rather than assuming this full list.
+</Note>
 
 ## Currency Codes
 
@@ -93,6 +110,7 @@ When creating payments or invoices, use these exact currency codes:
 | Solana           | `SOL`        | Solana Mainnet      |
 | USDC (Solana)    | `USDC_SOL`   | Solana              |
 | USDC (BEP-20)    | `USDC_BEP20` | Binance Smart Chain |
+| Monero           | `XMR`        | Monero Mainnet      |
 
 <Warning>
   Always use the exact code as shown. Currency codes are case-sensitive.
@@ -193,6 +211,81 @@ USDC is available on multiple networks. InventPay supports two:
   customers use Solana wallets. Use **USDC_BEP20** for BSC ecosystem users.
 </Tip>
 
+## Understanding Monero (XMR)
+
+Monero is a privacy-focused cryptocurrency. It behaves differently from every
+other currency InventPay supports, in ways that affect how you build against it.
+
+### What is different
+
+<AccordionGroup>
+  <Accordion title="There is no block explorer link" icon="eye-slash">
+    Monero uses stealth addresses: the blockchain contains no link between a
+    payment and the address it was sent to. Nobody without the wallet's private
+    view key can look up a payment, so there is **no explorer URL** to show a
+    customer or put in a receipt.
+
+    Verification instead uses a **transaction key**, which InventPay records for
+    every XMR withdrawal. That key proves a specific payment was made to a
+    specific address. Do not build a UI that offers to "view on explorer" for
+    XMR.
+  </Accordion>
+
+  <Accordion title="Settlement always takes 10 confirmations" icon="clock">
+    Monero locks outputs for 10 blocks at the **protocol level**. This is not a
+    risk policy InventPay chose and it cannot be shortened — until those blocks
+    pass, the funds are not merely unconfirmed, they are unspendable by anyone.
+
+    Expect roughly 20 minutes from payment to settlement. Payments are visible
+    as `PROCESSING` almost immediately, so you can show a customer their payment
+    was received while the lock runs down.
+  </Accordion>
+
+  <Accordion title="Amounts have 12 decimal places" icon="calculator">
+    Monero's atomic unit is the piconero: 1 XMR = 1,000,000,000,000 piconero.
+    Store amounts at full precision and round only for display — six decimals is
+    plenty on a receipt.
+
+    Note that 12 decimals exceeds what a JavaScript `Number` can represent
+    exactly for large amounts. Use a decimal library or strings for XMR amounts
+    rather than floats.
+  </Accordion>
+
+  <Accordion title="Availability depends on the deployment" icon="plug">
+    Every other currency is derived from a master seed. Monero cannot be — it
+    requires a live Monero wallet on the API side. Call
+    [`GET /v1/currencies`](/api-reference/get-currencies) to see whether your
+    account accepts XMR rather than hardcoding it.
+  </Accordion>
+</AccordionGroup>
+
+### Address formats
+
+| Type | Length | Starts with | Accepted |
+| ---- | ------ | ----------- | -------- |
+| Standard | 95 | `4` | Yes |
+| Subaddress | 95 | `8` | Yes |
+| Integrated | 106 | `4` | Yes |
+
+<Warning>
+  A malformed or wrong-network Monero address is **unrecoverable** once sent,
+  and there is no explorer to detect the mistake afterwards. InventPay validates
+  every XMR withdrawal address against the wallet before moving funds, but
+  double-check addresses in your own UI too.
+</Warning>
+
+### Best for
+
+- Customers who require payment privacy
+- Markets where financial privacy is a product requirement
+- Audiences already holding XMR
+
+<Info>
+  Monero's privacy is a property of the chain, not of InventPay. Your own
+  records — orders, invoices, customer emails — are unaffected, and you still
+  see every XMR payment in your dashboard and balances as normal.
+</Info>
+
 ## Network Selection Guide
 
 Choosing the right network is crucial for your customers' experience:
@@ -225,6 +318,7 @@ Choosing the right network is crucial for your customers' experience:
     - Let customers choose their preferred crypto
     - Maximize conversion rates
     - Accommodate different regions
+    - Include `XMR` if privacy matters to your audience
   </Accordion>
 </AccordionGroup>
 
@@ -242,6 +336,7 @@ When specifying amounts in API requests, you can denominate in different currenc
 | Ethereum  | `ETH`  | ETH-denominated pricing   |
 | Litecoin  | `LTC`  | LTC-denominated pricing   |
 | Solana    | `SOL`  | SOL-denominated pricing   |
+| Monero    | `XMR`  | XMR-denominated pricing   |
 
 ### Example: USD-based Pricing
 
@@ -309,6 +404,7 @@ Each cryptocurrency has minimum payment amounts to ensure economic viability:
 | SOL        | 0.1 SOL (~$15)   | Network fee considerations |
 | USDC_SOL   | 5 USDC           | Processing efficiency      |
 | USDC_BEP20 | 5 USDC           | Processing efficiency      |
+| XMR        | 0.01 XMR (~$4)   | Network fee considerations |
 
 <Warning>
   Payments below minimum amounts will be rejected at creation. Always validate
@@ -331,6 +427,7 @@ Understanding network fees helps you choose the right cryptocurrency:
 | SOL        | $0.001-0.01 | Ultra-low and stable      |
 | USDC_SOL   | $0.001-0.01 | Ultra-low and stable      |
 | USDC_BEP20 | $0.10-0.50  | Low and stable            |
+| XMR        | $0.01-0.10  | Low and stable            |
 
 <Tip>
   **Customer pays network fees** when sending payment. **You pay network fees**
@@ -354,6 +451,7 @@ graph LR
     B -->|SOL| I[Finalized ≈ 12 sec]
     B -->|USDC SOL| J[Finalized ≈ 12 sec]
     B -->|USDC BEP20| K[15 blocks ≈ 45 sec]
+    B -->|XMR| L[10 blocks ≈ 20 min]
     C --> H[COMPLETED]
     D --> H
     E --> H
@@ -362,6 +460,7 @@ graph LR
     I --> H
     J --> H
     K --> H
+    L --> H
 ```
 
 ### Why Different Confirmation Counts?
@@ -407,7 +506,17 @@ ltc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfhx0wlh
 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
 ```
 
+```text Monero (XMR)
+44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A
+```
+
 </CodeGroup>
+
+<Note>
+  Monero addresses are 95 characters and begin with `4` (standard) or `8`
+  (subaddress). Integrated addresses are 106 characters. All three are accepted
+  for withdrawals and validated against the wallet before any funds move.
+</Note>
 
 <Warning>
   **CRITICAL:** USDT_ERC20, USDT_BEP20, and USDC_BEP20 use similar address formats (0x...) but are on

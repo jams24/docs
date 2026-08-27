@@ -14,6 +14,28 @@ from inventpay import InventPayClient
 client = InventPayClient(api_key=os.getenv('INVENTPAY_API_KEY'))
 ```
 
+## Currencies
+
+### Get Supported Currencies
+
+Ask the API what it actually accepts rather than hardcoding a list. `XMR` is only
+available on deployments with a Monero wallet configured, so a fixed list can
+offer a currency the API will reject.
+
+```python
+res = sdk.get_supported_currencies()
+
+for c in res.currencies:
+    print(f"{c.code} — {c.name} on {c.network}")
+    print(f"  display to {c.display_decimals} dp (chain has {c.decimals})")
+    print(f"  settles after {c.min_confirmations} confirmations")
+
+accepts_monero = any(c.code == "XMR" for c in res.currencies)
+```
+
+No API key is required for this call, so it is safe to use on a public checkout
+page.
+
 ## Payments
 
 ### Create a Payment

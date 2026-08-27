@@ -15,6 +15,29 @@ const client = new InventPayClient({
 });
 ```
 
+## Currencies
+
+### Get Supported Currencies
+
+Ask the API what it actually accepts rather than hardcoding a list. `XMR` is only
+available on deployments with a Monero wallet configured, so a fixed list can
+offer a currency the API will reject.
+
+```typescript
+const { currencies } = await sdk.getSupportedCurrencies();
+
+currencies.forEach((c) => {
+  console.log(`${c.code} — ${c.name} on ${c.network}`);
+  console.log(`  display to ${c.displayDecimals} dp (chain has ${c.decimals})`);
+  console.log(`  settles after ${c.minConfirmations} confirmations`);
+});
+
+const acceptsMonero = currencies.some((c) => c.code === "XMR");
+```
+
+No API key is required for this call, so it is safe to use on a public checkout
+page.
+
 ## Payments
 
 ### Create a Payment

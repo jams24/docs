@@ -140,6 +140,18 @@ Add to your Windsurf MCP configuration:
 | `create_invoice` | Create a multi-currency invoice — customer chooses which crypto to pay with |
 | `get_payment_status` | Check payment status, confirmations, and transaction details |
 
+### Currencies
+
+| Tool | Description |
+|------|-------------|
+| `get_supported_currencies` | List the cryptocurrencies this deployment accepts, with networks, display precision, and settlement confirmations |
+
+<Note>
+  Call this before offering a customer a choice of currency. `XMR` requires a
+  Monero wallet on the API side, so it is not available on every deployment —
+  assuming it is will produce a rejected payment.
+</Note>
+
 ### Balances
 
 | Tool | Description |
@@ -283,8 +295,9 @@ You have access to InventPay MCP tools for managing crypto payments, stores, and
 ## Available Tools
 
 Payments:
-- create_payment — Create a crypto payment. Params: amount (number), currency (BTC|ETH|LTC|USDT_ERC20|USDT_BEP20|SOL|USDC_SOL|USDC_BEP20), amountCurrency (USD|USDT|SOL), orderId, description, callbackUrl, expirationMinutes
+- create_payment — Create a crypto payment. Params: amount (number), currency (BTC|ETH|LTC|XMR|USDT_ERC20|USDT_BEP20|SOL|USDC_SOL|USDC_BEP20), amountCurrency (USD|USDT|SOL), orderId, description, callbackUrl, expirationMinutes
 - create_invoice — Create a multi-currency invoice (customer picks crypto). Params: amount, amountCurrency, orderId, description, expirationMinutes
+- get_supported_currencies — List the currencies this deployment accepts. No params. Call before offering a currency choice; XMR is not available everywhere.
 - get_payment_status — Check payment status. Params: paymentId
 
 Balances:
@@ -332,7 +345,7 @@ Analytics:
 
 ## Guidelines
 - All amounts in USD unless specified otherwise
-- Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20, SOL, USDC_SOL, USDC_BEP20
+- Supported cryptos: BTC, ETH, LTC, XMR, USDT_ERC20, USDT_BEP20, SOL, USDC_SOL, USDC_BEP20
 - Payment expiration: 5-1440 minutes (default 30)
 - Always confirm withdrawal details with the user before executing
 - Withdrawals require BOTH keys (API key + withdrawal key) and do NOT require 2FA — just call the endpoint directly
@@ -374,7 +387,7 @@ There are two separate keys with distinct purposes:
 ## API Endpoints
 
 Payments:
-- POST /v1/create_payment — Create a crypto payment. Body: { amount, currency (BTC|ETH|LTC|USDT_ERC20|USDT_BEP20|SOL|USDC_SOL|USDC_BEP20), amountCurrency (USD|USDT|SOL), orderId, description, callbackUrl, expirationMinutes }
+- POST /v1/create_payment — Create a crypto payment. Body: { amount, currency (BTC|ETH|LTC|XMR|USDT_ERC20|USDT_BEP20|SOL|USDC_SOL|USDC_BEP20), amountCurrency (USD|USDT|SOL), orderId, description, callbackUrl, expirationMinutes }
 - POST /v1/create_invoice — Create a multi-currency invoice. Body: { amount, amountCurrency, orderId, description, expirationMinutes }
 - GET /v1/invoice/{paymentId}/status — Check payment status (no auth required)
 
@@ -419,7 +432,7 @@ Orders:
 
 ## Guidelines
 - All amounts in USD unless specified otherwise
-- Supported cryptos: BTC, ETH, LTC, USDT_ERC20, USDT_BEP20, SOL, USDC_SOL, USDC_BEP20
+- Supported cryptos: BTC, ETH, LTC, XMR, USDT_ERC20, USDT_BEP20, SOL, USDC_SOL, USDC_BEP20
 - Payment expiration: 5-1440 minutes (default 30)
 - Always confirm withdrawal details with the user before executing
 - Withdrawals require BOTH headers (X-API-Key + X-Withdrawal-Key) and do NOT require 2FA — just call the endpoint directly

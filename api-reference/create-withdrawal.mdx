@@ -42,12 +42,26 @@ This endpoint requires **two** authentication headers when called via API:
 </ParamField>
 
 <ParamField body="currency" type="string" required>
-  Cryptocurrency to withdraw. One of: `BTC`, `ETH`, `LTC`, `USDT_ERC20`, `USDT_BEP20`, `SOL`, `USDC_SOL`, `USDC_BEP20`
+  Cryptocurrency to withdraw. One of: `BTC`, `ETH`, `LTC`, `XMR`, `USDT_ERC20`, `USDT_BEP20`, `SOL`, `USDC_SOL`, `USDC_BEP20`
 </ParamField>
 
 <ParamField body="destinationAddress" type="string" required>
   External wallet address to send funds to. Must be valid for the selected currency.
+
+  For `XMR`, standard (95 characters, starting `4`), subaddress (95 characters,
+  starting `8`) and integrated (106 characters) formats are all accepted.
 </ParamField>
+
+<Warning>
+  **Monero withdrawals cannot be traced or reversed.** A malformed or
+  wrong-network address is unrecoverable, and there is no block explorer to
+  detect the mistake afterwards. InventPay validates every XMR address against
+  the wallet before moving funds, but verify addresses in your own flow too.
+
+  Note also that XMR draws only on your **unlocked** balance. Monero locks
+  outputs for 10 blocks at the protocol level, so funds received in the last
+  ~20 minutes cannot be withdrawn yet.
+</Warning>
 
 <ParamField body="description" type="string">
   Optional description or memo for the withdrawal (max 500 characters).
